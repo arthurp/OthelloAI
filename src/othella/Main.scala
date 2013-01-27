@@ -34,7 +34,7 @@ object Main extends SimpleSwingApplication {
 	  render()
 	  
 	  if(engine.gameOver)
-	    statusLabel.text = "Game Over!!"
+	    statusLabel.text = "Game Over!! " + engine.leadingPlayer + " Wins!"
 	}
 	
 	def render() {
@@ -43,7 +43,8 @@ object Main extends SimpleSwingApplication {
 	    b.text = d.toString
 	  }
 	        
-	  statusLabel.text = "Next play: " + engine.currentTurn
+	  statusLabel.text = "Next play: " + engine.currentTurn + "       " + 
+			  Black + ": " + engine.score(Black) + " " + White + ": " + engine.score(White)
 	}
 	
 	render()

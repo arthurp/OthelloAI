@@ -30,7 +30,9 @@ case object SW extends Direction((-1,1))
 case object W extends Direction((-1,0))
 case object NW extends Direction((-1,-1))
 
-object Direction{ val all = List(N,NE,E,SE,S,SW,W,NW)}
+object Direction {
+  val all = List(N,NE,E,SE,S,SW,W,NW)
+}
 
 class GameEngine {
 	private val _board = new ArrayBuffer(8) ++ (0 to 7).map( _ => 
@@ -63,6 +65,19 @@ class GameEngine {
 				  _gameOver = true
 		  }
 	  }
+	}
+	
+	def score(p : PlayerCellState) : Int = board.flatten.count(_ == p)
+	
+	def leadingPlayer : CellState = {
+	  val b = score(Black)
+	  val w = score(White)
+	  if( b > w )
+		Black
+	  else if( w > b )
+	    White
+	  else
+	    Empty
 	}
 	
 	def isValidMove(x:Int,y:Int) = cell(x,y) == Empty && Direction.all.exists( directionHasFlip(x, y, _) )
