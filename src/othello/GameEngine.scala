@@ -1,22 +1,27 @@
-package othella
+package othello
 
 import scala.collection.mutable.ArrayBuffer
 sealed trait CellState
 
+
 sealed trait PlayerCellState extends CellState {
   def otherPlayer : PlayerCellState
+  def intVal : Int
 }
 
 case object Black extends PlayerCellState {
   override def toString = "X"
+  def intVal = 1  
   def otherPlayer = White
 }
 case object White extends PlayerCellState {
   override def toString = "O"
+  def intVal = -1
   def otherPlayer = Black
 }
 
 case object Empty extends CellState {
+  def intVal = 0
   override def toString = " "
 }
 
@@ -35,8 +40,9 @@ object Direction {
 }
 
 class GameEngine {
-	private val _board = new ArrayBuffer(8) ++ (0 to 7).map( _ => 
-	  new ArrayBuffer[CellState](8) ++ (0 to 7).map( _ => Empty ) )
+	type Player = PlayerCellState
+    private val _board = new ArrayBuffer(8) ++ (0 to 7).map( _ => 
+	   new ArrayBuffer[CellState](8) ++ (0 to 7).map( _ => Empty ) )
 	private var _currentTurn : PlayerCellState = Black
 	
 	private var _gameOver = false
@@ -51,18 +57,30 @@ class GameEngine {
 	def currentTurn = _currentTurn
 	def cell(x:Int,y:Int) = if(x < 0 || x >= 8 || y < 0 || y >= 8) Empty else _board(x)(y)
 	def board : Seq[Seq[CellState]] = _board
-	
-	def makeMove(x:Int,y:Int) {
-	  if(isValidMove(x,y)) {
-		  _board(x)(y) = currentTurn
-		  for(d <- Direction.all if directionHasFlip(x, y, d)) {
+	def copy() ={
+	  var newGame = new GameEngine()
+	  newGame._currentTurn = _currentTurn
+	  newGame._gameOver = _gameOver
+	  for(i <- (0 to 7) ; j <- (0 to 7)) {
+	    newGame._board(i)(j) = _board(i)(j)
+	  }
+	  newGame
+	}
+	def makeMove(x:Int, y:Int, p:Player) {
+	  if(p != currentTurn) {
+	    throw new Exception("It is not players turn");
+	  }
+	  if(isValidMove(x,y,p)) {
+		  _board(x)(y) = p
+		  for(d <- Direction.all if directionHasFlip(x, y, p, d)) {
 		    flipDirection(x, y, d)
 		  }
-		  _currentTurn = _currentTurn.otherPlayer
-		  if(allLegalMoves().isEmpty) {
+		  
+		  if(allLegalMoves(p.otherPlayer).isEmpty) {
+		    if(allLegalMoves(p).isEmpty)
+		    	_gameOver = true
+		  } else {
 			  _currentTurn = _currentTurn.otherPlayer
-			  if(allLegalMoves().isEmpty)
-				  _gameOver = true
 		  }
 	  }
 	}
@@ -80,18 +98,18 @@ class GameEngine {
 	    Empty
 	}
 	
-	def isValidMove(x:Int,y:Int) = cell(x,y) == Empty && Direction.all.exists( directionHasFlip(x, y, _) )
+	def isValidMove(x:Int,y:Int,p:Player) = cell(x,y) == Empty && Direction.all.exists( directionHasFlip(x, y, p, _) )
 	
-	private def directionHasFlip(x : Int, y : Int, d : Direction) : Boolean = {
+	private def directionHasFlip(x : Int, y : Int, p : Player, d : Direction) : Boolean = {
 		def h(x : Int, y : Int, d : Direction) : Boolean = {
 			val (dx, dy) = d.step
 		
-			(cell(x+dx, y+dy) == currentTurn.otherPlayer && h(x+dx, y+dy, d)) ||
-			(cell(x+dx, y+dy) == currentTurn)
+			(cell(x+dx, y+dy) == p.otherPlayer && h(x+dx, y+dy, d)) ||
+			(cell(x+dx, y+dy) == p)
 		}
 		
 		val (dx, dy) = d.step
-		h(x, y, d) && cell(x+dx, y+dy) == currentTurn.otherPlayer
+		h(x, y, d) && cell(x+dx, y+dy) == p.otherPlayer
 	}
 	
 	private def flipDirection(x : Int, y : Int, d : Direction) {
@@ -103,7 +121,12 @@ class GameEngine {
 		}
 	}
 	
-	def allLegalMoves() = {
-	  for(i <- 0 to 7; j <- 0 to 7 if isValidMove(i, j)) yield (i, j)
+	def allLegalMoves(p : Player) = {
+	  for(i <- 0 to 7; j <- 0 to 7 if isValidMove(i, j, p)) yield (i, j)
 	} 
+	
+	override def toString = {
+	  "c=" + currentTurn + ". go=" + gameOver + "\n" +
+	  _board.map(_.mkString(",")).mkString("\n")
+	}
 }

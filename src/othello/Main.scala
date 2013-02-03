@@ -1,7 +1,8 @@
-package othella
+package othello
 import scala.swing._
 import scala.swing.event.MouseClicked
 import scala.collection.mutable.ArrayBuffer
+import java.awt.Color
  
 object Main extends SimpleSwingApplication {
 	lazy val buttons = (0 to 7).map(x => (0 to 7).map(y => 
@@ -25,14 +26,22 @@ object Main extends SimpleSwingApplication {
 	}
 	
 	val engine  = new GameEngine
+	val ai = new AI
 	
 	def handleClick(x : Int, y : Int) {
 	  println((x,y))
 	  
-	  engine.makeMove(x, y)
-	  	  
-	  render()
+	  if( engine.currentTurn == Black ) {
+		  engine.makeMove(x, y, Black)
+		  render()
+	  }
 	  
+	  if( engine.currentTurn == White ) {
+		  val (mx, my) = ai.makeMove(engine)
+		  engine.makeMove(mx, my, White)
+		  render()
+	  }
+
 	  if(engine.gameOver)
 	    statusLabel.text = "Game Over!! " + engine.leadingPlayer + " Wins!"
 	}
@@ -41,6 +50,11 @@ object Main extends SimpleSwingApplication {
 	  for{ (bs, ds) <- (buttons zip engine.board)
 	        (b, d) <- (bs zip ds) } {
 	    b.text = d.toString
+	    b.background = d match {
+	      case Black => Color.darkGray
+	      case White => Color.white
+	      case Empty => Color.lightGray
+	    }
 	  }
 	        
 	  statusLabel.text = "Next play: " + engine.currentTurn + "       " + 
