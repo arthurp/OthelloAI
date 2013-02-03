@@ -59,16 +59,31 @@ class AI {
     heuristic(clone, b.currentTurn)
   } 
   
+  var trace = false
+  
+  def traceln(l : Int, v : Any) {
+    if( ! trace ) return
+    val ind = "> " * (6 - l)
+    val s = v.toString
+    val s1 = s.lines.map(ind + _).mkString("\n")
+    println(s1)
+  }
+  
   def scoreLookaheadTree(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : Float ={
     val clone = b.copy()
     clone.makeMove(x, y, b.currentTurn) 
     if(lookahead == 0) {
-    	heuristic(clone, topPlayer)
+    	traceln(lookahead, clone)
+    	val s = heuristic(clone, topPlayer)
+    	traceln(lookahead, s)
+    	s
     } else {
+     	traceln(lookahead, clone)
     	val children = for( (mx, my) <- clone.allLegalMoves(clone.currentTurn) ) yield {
     	  scoreLookaheadTree(heuristic, mx, my, clone, lookahead - 1, topPlayer)
     	}
-    	if( !children.isEmpty ) {
+     	traceln(lookahead, children)
+    	val s = if( !children.isEmpty ) {
 	    	if( topPlayer == b.currentTurn )
 	    	  children.max
 	    	else
@@ -80,6 +95,9 @@ class AI {
     		  -clone.score(topPlayer.otherPlayer)    		  
     		}
     	}
+    	traceln(lookahead, s)
+   	
+    	s
     }          
   } 
 }

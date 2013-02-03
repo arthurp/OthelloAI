@@ -22,7 +22,7 @@ case object White extends PlayerCellState {
 
 case object Empty extends CellState {
   def intVal = 0
-  override def toString = " "
+  override def toString = "_"
 }
 
 sealed class Direction(val step : (Int,Int))
@@ -127,6 +127,6 @@ class GameEngine {
 	
 	override def toString = {
 	  "c=" + currentTurn + ". go=" + gameOver + "\n" +
-	  _board.map(_.mkString(",")).mkString("\n")
+	  _board.map(_.mkString("")).mkString("\n")
 	}
 }

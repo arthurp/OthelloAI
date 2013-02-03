@@ -37,13 +37,12 @@ object Main extends SimpleSwingApplication {
 	  }
 	  
 	  if( engine.currentTurn == White ) {
-		  val (mx, my) = ai.makeMove(engine)
-		  engine.makeMove(mx, my, White)
-		  render()
+		  Swing.onEDT {
+			  val (mx, my) = ai.makeMove(engine)
+			  engine.makeMove(mx, my, White)
+			  render()
+		  }
 	  }
-
-	  if(engine.gameOver)
-	    statusLabel.text = "Game Over!! " + engine.leadingPlayer + " Wins!"
 	}
 	
 	def render() {
@@ -59,6 +58,8 @@ object Main extends SimpleSwingApplication {
 	        
 	  statusLabel.text = "Next play: " + engine.currentTurn + "       " + 
 			  Black + ": " + engine.score(Black) + " " + White + ": " + engine.score(White)
+	  if(engine.gameOver)
+		  statusLabel.text = "Game Over!! " + engine.leadingPlayer + " Wins!"
 	}
 	
 	render()
