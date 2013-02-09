@@ -1,6 +1,12 @@
 package othello
+import scala.util.control.Breaks
 
 class AI {
+  val mybreaks = new Breaks
+  import mybreaks.{break, breakable}
+  
+  
+  
   implicit def heuristic2Rich(h1 : Heuristic) = new {
     def +(h2 : Heuristic) : Heuristic = (b, p) => h1(b, p) + h2(b, p)
     def *(h2 : Heuristic) : Heuristic = (b, p) => h1(b, p) * h2(b, p)
@@ -52,11 +58,15 @@ class AI {
     val lookahead = 4;
     makeMoveInternal(b,lookahead)
   }
+  
+  val ninf = Float.NegativeInfinity
+  val inf = Float.PositiveInfinity
+  
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
     var winningMove : (Int,Int) = b.allLegalMoves(b.currentTurn).head; 
-    var winningScore = scoreLookaheadTree(heuristic, winningMove._1,winningMove._2,b,lookahead, b.currentTurn)
+    var winningScore = scoreLookaheadAlphaBeta(heuristic, winningMove._1,winningMove._2,b,lookahead, ninf, inf, b.currentTurn)
     for((x,y) <- b.allLegalMoves(b.currentTurn).tail) {
-      val s = scoreLookaheadTree(heuristic, x,y,b,lookahead, b.currentTurn)
+      val s = scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
       if (s > winningScore) {
         winningMove = (x,y)
         winningScore = s 
@@ -81,7 +91,7 @@ class AI {
     println(s1)
   }
   
-  def scoreLookaheadTree(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : Float ={
+  def scoreLookaheadNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : Float ={
     val clone = b.copy()
     clone.makeMove(x, y, b.currentTurn) 
     if(lookahead == 0) {
@@ -92,7 +102,7 @@ class AI {
     } else {
      	traceln(lookahead, clone)
     	val children = for( (mx, my) <- clone.allLegalMoves(clone.currentTurn) ) yield {
-    	  scoreLookaheadTree(heuristic, mx, my, clone, lookahead - 1, topPlayer)
+    	  scoreLookaheadNaive(heuristic, mx, my, clone, lookahead - 1, topPlayer)
     	}
      	traceln(lookahead, children)
     	val s = if( !children.isEmpty ) {
@@ -112,4 +122,49 @@ class AI {
     	s
     }          
   } 
+  
+  /*
+   * Alpha = the lower bound on the resulting score
+   * Beta = the upper bound of the resulting score
+   */
+  def scoreLookaheadAlphaBeta(heuristic : Heuristic, x : Int, y : Int, b : GameEngine, lookahead : Int, 
+		  					_alpha : Float, _beta : Float, maxPlayer : PlayerCellState) : Float ={
+    val clone = b.copy() 
+    clone.makeMove(x, y, b.currentTurn) 
+    if(lookahead == 0) {
+    	val s = heuristic(clone, maxPlayer)
+    	s
+    } else {
+     	var alpha = _alpha
+     	var beta = _beta
+     	val moves = clone.allLegalMoves(clone.currentTurn)
+     	if( moves.isEmpty ) {
+     	  // Game has ended
+    		if( clone.leadingPlayer == maxPlayer ) {
+    		  clone.score(maxPlayer)
+    		} else {
+    		  -clone.score(maxPlayer.otherPlayer)    		  
+    		}
+     	} else if( clone.currentTurn == maxPlayer ) {
+	     	breakable {
+	     	  for( (mx, my) <- moves ) {
+	     		  alpha = alpha max scoreLookaheadAlphaBeta(heuristic, mx, my, clone, lookahead - 1, alpha, beta, maxPlayer)
+	     		  if( beta <= alpha )
+	     		    break
+	     	  }
+	     	}
+	     	alpha
+     	} else {
+	     	breakable {
+	     	  for( (mx, my) <- moves ) {
+	     		  beta = beta min scoreLookaheadAlphaBeta(heuristic, mx, my, clone, lookahead - 1, alpha, beta, maxPlayer)
+	     		  if( beta <= alpha )
+	     		    break
+	     	  }
+	     	}
+	     	beta
+     	}
+    }          
+  } 
+  
 }
