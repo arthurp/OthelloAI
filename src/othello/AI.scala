@@ -32,12 +32,24 @@ class AI {
         -s
     }).sum / 100
   }
-
   
-  val heuristic = mobility1 + (positional * 2.0)
+  val mobility2 : Heuristic = (b, p) => {
+    var score : Float =0.0f; 
+    for( (x,y) <- b.allLegalMoves(p) ) {
+       if( positionScores(x)(y) > 0 ) 
+         score += positionScores(x)(y) 
+    }
+    for( (x,y) <- b.allLegalMoves(p.otherPlayer)) {
+       if( positionScores(x)(y) > 0 ) 
+    	 score -= positionScores(x)(y)
+    }
+    score / 500
+  }
+  
+  val heuristic = mobility1 + (positional * 2.0) + mobility2 * 1.5
   
   def makeMove(b : GameEngine) = {
-    val lookahead = 3;
+    val lookahead = 4;
     makeMoveInternal(b,lookahead)
   }
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
