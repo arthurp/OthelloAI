@@ -1,11 +1,26 @@
 package othello
 import scala.util.control.Breaks
 
+import scala.math.Ordered
+
+object AI {
+  type Heuristic = (GameEngine, PlayerCellState) => Float
+}
+
+case class Score(score : Float, heuristics : Map[String, Float] = Map()) extends Ordered[Score] {
+  def compare(o : Score) = {
+    score compareTo o.score
+  }
+  
+  override def toString = {
+    "%s (%s)".format(score, heuristics)
+  }
+}
+
 class AI {
   val mybreaks = new Breaks
   import mybreaks.{break, breakable}
-  
-  
+  import AI._
   
   implicit def heuristic2Rich(h1 : Heuristic) = new {
     def +(h2 : Heuristic) : Heuristic = (b, p) => h1(b, p) + h2(b, p)
@@ -13,9 +28,7 @@ class AI {
   }
   implicit def constantHeuristic(v : Float) : Heuristic = (b, p) => v
   implicit def constantHeuristic(v : Double) : Heuristic = (b, p) => v.floatValue()
-  
-  type Heuristic = (GameEngine, PlayerCellState) => Float
-  
+    
   val mobility1 : Heuristic = (b, p) => {
     (b.allLegalMoves(p).size - b.allLegalMoves(p.otherPlayer).size) / 6
   }
@@ -34,8 +47,10 @@ class AI {
     (for( (c, s) <- b.board.flatten.zip(positionScores.flatten) ) yield {
       if( c == p )
         s
-      else
+      else if( c == p.otherPlayer )
         -s
+      else 
+        0
     }).sum / 100
   }
   
@@ -55,7 +70,7 @@ class AI {
   val heuristic = mobility1 + (positional * 2.0) + mobility2 * 1.5
   
   def makeMove(b : GameEngine) = {
-    val lookahead = 4;
+    val lookahead = 3
     makeMoveInternal(b,lookahead)
   }
   
@@ -63,16 +78,15 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    var winningMove : (Int,Int) = b.allLegalMoves(b.currentTurn).head; 
-    var winningScore = scoreLookaheadAlphaBeta(heuristic, winningMove._1,winningMove._2,b,lookahead, ninf, inf, b.currentTurn)
-    for((x,y) <- b.allLegalMoves(b.currentTurn).tail) {
-      val s = scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
-      if (s > winningScore) {
-        winningMove = (x,y)
-        winningScore = s 
-      }      
+    def scoreMove(x : Int, y : Int) = {
+      //scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
+      val (s, trace) = scoreLookaheadNaive(heuristic, x,y,b,lookahead, b.currentTurn)
+      //println(trace)
+      s
     }
-    winningMove
+    val moves = for((x,y) <- b.allLegalMoves(b.currentTurn)) yield
+      			    ((x, y), scoreMove(x, y))
+    moves.minBy(_._2)._1
   }
   
   def scoreNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine) ={
@@ -81,45 +95,40 @@ class AI {
     heuristic(clone, b.currentTurn)
   } 
   
-  var trace = false
+  val allHeuristics = Seq(("mobility1", mobility1), ("mobility2", mobility2), ("positional", positional))
   
-  def traceln(l : Int, v : Any) {
-    if( ! trace ) return
-    val ind = "> " * (6 - l)
-    val s = v.toString
-    val s1 = s.lines.map(ind + _).mkString("\n")
-    println(s1)
+  def computeAllHeuristics(b : GameEngine, p : PlayerCellState) : Map[String, Float] = {
+    Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
   
-  def scoreLookaheadNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : Float ={
+  def scoreLookaheadNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : (Score, TraceNode) ={
     val clone = b.copy()
     clone.makeMove(x, y, b.currentTurn) 
+    
+    val maximizing = topPlayer == clone.currentTurn // maximize the next possible moves if we will be making the choice
     if(lookahead == 0) {
-    	traceln(lookahead, clone)
     	val s = heuristic(clone, topPlayer)
-    	traceln(lookahead, s)
-    	s
+    	val score = Score(s, computeAllHeuristics(clone, topPlayer))
+    	(score, TraceNode(score, score, score, maximizing, Seq(), 0, clone, Some(score)))
     } else {
-     	traceln(lookahead, clone)
-    	val children = for( (mx, my) <- clone.allLegalMoves(clone.currentTurn) ) yield {
+    	val childrenResults = for( (mx, my) <- clone.allLegalMoves(clone.currentTurn) ) yield {
     	  scoreLookaheadNaive(heuristic, mx, my, clone, lookahead - 1, topPlayer)
     	}
-     	traceln(lookahead, children)
+    	val (children, traces) = childrenResults.unzip
     	val s = if( !children.isEmpty ) {
-	    	if( topPlayer == b.currentTurn )
+	    	if( maximizing )
 	    	  children.max
 	    	else
 	    	  children.min
     	} else {
     		if( clone.leadingPlayer == topPlayer ) {
-    		  clone.score(topPlayer)
+    		  Score(clone.score(topPlayer))
     		} else {
-    		  -clone.score(topPlayer.otherPlayer)    		  
+    		  Score(-clone.score(topPlayer.otherPlayer))    		  
     		}
     	}
-    	traceln(lookahead, s)
-   	
-    	s
+    	
+    	(s, TraceNode(s, s, s, maximizing, traces, 0, clone, None))
     }          
   } 
   
