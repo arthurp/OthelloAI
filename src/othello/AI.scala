@@ -1,10 +1,27 @@
 package othello
 import scala.util.control.Breaks
+import scala.math._
+import scala.collection.mutable.ListBuffer
 
-import scala.math.Ordered
+abstract class Heuristic {
+  val logLen = 100
+  val log = ListBuffer[Float](1)
+  
+  def apply(g : GameEngine, p : PlayerCellState) : Float = {
+    val v = compute(g, p)
+    if( log.length > logLen ) log.remove(logLen)
+    v +=: log
+    val avg = averageValue
+    if( avg == 0.0f ) v 
+    else v / avg 
+  }
+  
+  def averageValue : Float = sqrt(log.map(pow(_, 2)).sum / log.length).floatValue()
+  
+  def compute(g : GameEngine, p : PlayerCellState) : Float = throw new Exception()
+}
 
 object AI {
-  type Heuristic = (GameEngine, PlayerCellState) => Float
 }
 
 case class Score(score : Float, heuristics : Map[String, Float] = Map()) extends Ordered[Score] {
@@ -23,15 +40,23 @@ class AI {
   import AI._
   
   implicit def heuristic2Rich(h1 : Heuristic) = new {
-    def +(h2 : Heuristic) : Heuristic = (b, p) => h1(b, p) + h2(b, p)
-    def *(h2 : Heuristic) : Heuristic = (b, p) => h1(b, p) * h2(b, p)
+    def +(h2 : Heuristic) : Heuristic = new Heuristic { 
+      override def apply(b : GameEngine, p : PlayerCellState) = h1(b, p) + h2(b, p) 
+    }
+    def *(h2 : Heuristic) : Heuristic = new Heuristic {
+      override def apply(b : GameEngine, p : PlayerCellState)  = h1(b, p) * h2(b, p)
+    }
   }
-  implicit def constantHeuristic(v : Float) : Heuristic = (b, p) => v
-  implicit def constantHeuristic(v : Double) : Heuristic = (b, p) => v.floatValue()
-    
-  val mobility1 : Heuristic = (b, p) => {
-    (b.allLegalMoves(p).size - b.allLegalMoves(p.otherPlayer).size) / 6
+  implicit def constantHeuristic(v : Float) : Heuristic =  new Heuristic {
+    override def apply(b : GameEngine, p : PlayerCellState)  = v
   }
+  implicit def constantHeuristic(v : Double) : Heuristic = new Heuristic {
+    override def apply(b : GameEngine, p : PlayerCellState)  = v.floatValue()
+  }  
+  val mobility1 : Heuristic = new Heuristic {
+      override def compute(b : GameEngine, p : PlayerCellState)  = {
+    (b.allLegalMoves(p).size - b.allLegalMoves(p.otherPlayer).size)
+  } }
   
   val positionScores : Seq[Seq[Float]] = 
 		  			   Seq(Seq(99,  -8,  8,  6,  6,  8,  -8, 99), 
@@ -43,7 +68,8 @@ class AI {
 		  				   Seq(-8, -24,  1,  2,  2,  1, -24, -8),
 		  				   Seq(99,  -8,  8,  6,  6,  8,  -8, 99))
 
-  val positional : Heuristic = (b, p) => {
+  val positional = new Heuristic {
+      override def compute(b : GameEngine, p : PlayerCellState)  =  {
     (for( (c, s) <- b.board.flatten.zip(positionScores.flatten) ) yield {
       if( c == p )
         s
@@ -51,10 +77,11 @@ class AI {
         -s
       else 
         0
-    }).sum / 100
-  }
+    }).sum 
+  } }
   
-  val mobility2 : Heuristic = (b, p) => {
+  val mobility2 = new Heuristic {
+      override def compute(b : GameEngine, p : PlayerCellState)  = {
     var score : Float =0.0f; 
     for( (x,y) <- b.allLegalMoves(p) ) {
        if( positionScores(x)(y) > 0 ) 
@@ -64,10 +91,10 @@ class AI {
        if( positionScores(x)(y) > 0 ) 
     	 score -= positionScores(x)(y)
     }
-    score / 500
-  }
+    score
+  } }
   
-  val heuristic = mobility1 + (positional * 2.0) + mobility2 * 1.5
+  val heuristic = mobility1 + (positional * 30.0) + mobility2 * 1.5
   
   def makeMove(b : GameEngine) = {
     val lookahead = 3
@@ -81,7 +108,7 @@ class AI {
     def scoreMove(x : Int, y : Int) = {
       //scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
       val (s, trace) = scoreLookaheadNaive(heuristic, x,y,b,lookahead, b.currentTurn)
-      //println(trace)
+      println(trace)
       s
     }
     val moves = for((x,y) <- b.allLegalMoves(b.currentTurn)) yield
