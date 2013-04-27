@@ -113,15 +113,9 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    def scoreMove(x : Int, y : Int) = {
-      //scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
-      val (s, trace) = scoreLookaheadNaive(heuristic, x,y,b,lookahead, b.currentTurn)
-      Utils.printToFile(new File("trace.xml"))(p => p.println(trace))
-      s
-    }
-    val moves = for((x,y) <- b.allLegalMoves(b.currentTurn)) yield
-      			    ((x, y), scoreMove(x, y))
-    moves.minBy(_._2)._1
+    val (m, _, t) = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
+    Utils.printToFile(new File("trace.xml"))(p => p.println(t))
+    m.get
   }
   
   def scoreNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine) ={
@@ -136,34 +130,63 @@ class AI {
     Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
   
-  def scoreLookaheadNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : (Score, TraceNode) ={
-    val clone = b.copy()
-    clone.makeMove(x, y, b.currentTurn) 
-    
-    val maximizing = topPlayer == clone.currentTurn // maximize the next possible moves if we will be making the choice
-    if(lookahead == 0) {
-    	val s = heuristic(clone, topPlayer)
-    	val score = Score(s, computeAllHeuristics(clone, topPlayer))
-    	(score, TraceNode(score, score, score, maximizing, Seq(), 0, clone, Some(score)))
-    } else {
-    	val childrenResults = for( (mx, my) <- clone.allLegalMoves(clone.currentTurn) ) yield {
-    	  scoreLookaheadNaive(heuristic, mx, my, clone, lookahead - 1, topPlayer)
-    	}
-    	val (children, traces) = childrenResults.unzip
-    	val s = if( !children.isEmpty ) {
+  /*
+  def scoreChildren(childrenResults : Seq[((Int, Int), Score, TraceNode)], maximizing : Boolean, topPlayer : PlayerCellState, b : GameEngine) = {
+        if( !childrenResults.isEmpty ) {
 	    	if( maximizing )
-	    	  children.max
+	    	  childrenResults.maxBy(_._2)
 	    	else
-	    	  children.min
+	    	  childrenResults.minBy(_._2)
     	} else {
-    		if( clone.leadingPlayer == topPlayer ) {
-    		  Score(clone.score(topPlayer))
+    		if( b.leadingPlayer == topPlayer ) {
+    		  (null, Score(b.score(topPlayer)), b)
     		} else {
-    		  Score(-clone.score(topPlayer.otherPlayer))    		  
+    		  (null, Score(-b.score(topPlayer.otherPlayer)), b)   		  
+    		}
+    	}
+  } 
+    */
+  
+  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : (Option[(Int, Int)], Score, TraceNode) ={
+    val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
+    if(lookahead == 0 || b.allLegalMoves(b.currentTurn).isEmpty) {
+    	val scores = b.allLegalMoves(b.currentTurn).map(move => {
+    	  val clone = b.copy();
+    	  clone.makeMove(move._1,move._2,clone.currentTurn)
+    	  (Some(move), Score(heuristic(clone, topPlayer), computeAllHeuristics(clone, topPlayer)), clone)
+    	  })
+    	var bestMove : Option[(Int, Int)] = None;
+    	var bestScore : Score = null;
+    	var bestBoard = b;
+    	if(!scores.isEmpty) {
+    		val (bestMove1, bestScore1, bestBoard1) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
+    		bestMove = bestMove1
+    		bestScore = bestScore1
+    		bestBoard = bestBoard1
+    	} else {
+    		bestScore = if( b.leadingPlayer == topPlayer ) {
+    		  Score(b.score(topPlayer))
+    		} else {
+    		  Score(-b.score(topPlayer.otherPlayer))    		  
     		}
     	}
     	
-    	(s, TraceNode(s, s, s, maximizing, traces, 0, clone, None))
+    	// TODO: Fix trace generation
+    	(bestMove, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
+    } else {
+    	val childrenResults = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
+    	  val clone = b.copy();
+    	  clone.makeMove(mx,my,b.currentTurn)
+    	  val (_, s, t) = scoreLookaheadNaive(heuristic, clone, lookahead - 1, topPlayer)
+    	  (Some((mx, my)), s, t)
+    	}
+    	
+    	val (bestMove, bestScore, bestBoard) = if( maximizing )
+	    	  childrenResults.maxBy(_._2)
+	    	else
+	    	  childrenResults.minBy(_._2)
+    	
+    	(bestMove, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, childrenResults.map(_._3), 0, b, None))
     }          
   } 
   
