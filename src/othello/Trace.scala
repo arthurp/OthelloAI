@@ -1,5 +1,8 @@
 package othello
 
+import scala.xml.Elem
+import scala.xml.PrettyPrinter
+
 case class TraceNode(
 		score : Score, // The score of this node (derived from it's children, if it is an internal node).
 					   // This may not actually be the best possible since it might have pruned.
@@ -18,10 +21,16 @@ case class TraceNode(
   }
 
   override def toString = {
-    indent(1,
+    /*indent(1,
 	    "Score: %s%nAlpha: %s, Beta: %s, Max? %b, Pruned: %d%nPos. Score: %s%n%s%n%s".
 	    	format(score, alpha.score, beta.score, maxmin, prunedN, positionScore, position,
 	    	    descendants.map(_.toString).mkString("\n")) 
-	    	)
+	    	)*/
+    val pp = new PrettyPrinter(80, 2)
+    pp.format(toXML)
+  }
+  
+  def toXML : Elem = {
+    <node maxmin={maxmin.toString}><board>{position.toString}</board>{score.toXML +: descendants.map(_.toXML)}</node>
   }
 }

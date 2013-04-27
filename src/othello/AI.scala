@@ -2,6 +2,8 @@ package othello
 import scala.util.control.Breaks
 import scala.math._
 import scala.collection.mutable.ListBuffer
+import scala.xml.Elem
+import java.io.File
 
 abstract class Heuristic {
   val logLen = 100
@@ -31,6 +33,12 @@ case class Score(score : Float, heuristics : Map[String, Float] = Map()) extends
   
   override def toString = {
     "%s (%s)".format(score, heuristics)
+  }
+  
+  def toXML : Elem = { 
+    <score value={score.toString}>
+     	{ for((heuristic, value) <- heuristics ) yield <heuristic name={heuristic} value={value.toString} />}
+    </score>	
   }
 }
 
@@ -108,7 +116,7 @@ class AI {
     def scoreMove(x : Int, y : Int) = {
       //scoreLookaheadAlphaBeta(heuristic, x,y,b,lookahead, ninf, inf, b.currentTurn)
       val (s, trace) = scoreLookaheadNaive(heuristic, x,y,b,lookahead, b.currentTurn)
-      println(trace)
+      Utils.printToFile(new File("trace.xml"))(p => p.println(trace))
       s
     }
     val moves = for((x,y) <- b.allLegalMoves(b.currentTurn)) yield
