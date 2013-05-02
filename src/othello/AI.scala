@@ -119,9 +119,7 @@ class AI {
   }
   
   def scoreNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine) ={
-    val clone = b.copy()
-    clone.makeMove(x,y,b.currentTurn) 
-    heuristic(clone, b.currentTurn)
+    heuristic(b.makeMove(x,y,b.currentTurn), b.currentTurn)
   } 
   
   val allHeuristics = Seq(("mobility1", mobility1), ("mobility2", mobility2), ("positional", positional))
@@ -129,55 +127,30 @@ class AI {
   def computeAllHeuristics(b : GameEngine, p : PlayerCellState) : Map[String, Float] = {
     Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
-  
-  /*
-  def scoreChildren(childrenResults : Seq[((Int, Int), Score, TraceNode)], maximizing : Boolean, topPlayer : PlayerCellState, b : GameEngine) = {
-        if( !childrenResults.isEmpty ) {
-	    	if( maximizing )
-	    	  childrenResults.maxBy(_._2)
-	    	else
-	    	  childrenResults.minBy(_._2)
-    	} else {
-    		if( b.leadingPlayer == topPlayer ) {
-    		  (null, Score(b.score(topPlayer)), b)
-    		} else {
-    		  (null, Score(-b.score(topPlayer.otherPlayer)), b)   		  
-    		}
-    	}
-  } 
-    */
-  
+
   def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : (Option[(Int, Int)], Score, TraceNode) ={
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
-    if(lookahead == 0 || b.allLegalMoves(b.currentTurn).isEmpty) {
-    	val scores = b.allLegalMoves(b.currentTurn).map(move => {
-    	  val clone = b.copy();
-    	  clone.makeMove(move._1,move._2,clone.currentTurn)
-    	  (Some(move), Score(heuristic(clone, topPlayer), computeAllHeuristics(clone, topPlayer)), clone)
-    	  })
-    	var bestMove : Option[(Int, Int)] = None;
-    	var bestScore : Score = null;
-    	var bestBoard = b;
-    	if(!scores.isEmpty) {
-    		val (bestMove1, bestScore1, bestBoard1) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
-    		bestMove = bestMove1
-    		bestScore = bestScore1
-    		bestBoard = bestBoard1
+    val currentLegalMoves = b.allLegalMoves(b.currentTurn)
+    
+    if(currentLegalMoves.isEmpty) {
+    	val bestScore = if( b.leadingPlayer == topPlayer ) {
+    		Score(b.score(topPlayer))
     	} else {
-    		bestScore = if( b.leadingPlayer == topPlayer ) {
-    		  Score(b.score(topPlayer))
-    		} else {
-    		  Score(-b.score(topPlayer.otherPlayer))    		  
-    		}
-    	}
-    	
+    		Score(-b.score(topPlayer.otherPlayer))    		  
+    	}      
     	// TODO: Fix trace generation
-    	(bestMove, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
+    	(None, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
+    } else if(lookahead == 0) {
+    	val scores = currentLegalMoves.map(move => {
+     	  val newb = b.makeMove(move._1,move._2,b.currentTurn)
+    	  (move, Score(heuristic(b, topPlayer), computeAllHeuristics(newb, topPlayer)), newb)
+    	  })
+    	val (bestMove, bestScore, bestBoard) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
+    	// TODO: Fix trace generation
+    	(Some(bestMove), bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
     } else {
     	val childrenResults = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
-    	  val clone = b.copy();
-    	  clone.makeMove(mx,my,b.currentTurn)
-    	  val (_, s, t) = scoreLookaheadNaive(heuristic, clone, lookahead - 1, topPlayer)
+    	  val (_, s, t) = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
     	  (Some((mx, my)), s, t)
     	}
     	
@@ -196,26 +169,25 @@ class AI {
    */
   def scoreLookaheadAlphaBeta(heuristic : Heuristic, x : Int, y : Int, b : GameEngine, lookahead : Int, 
 		  					_alpha : Float, _beta : Float, maxPlayer : PlayerCellState) : Float ={
-    val clone = b.copy() 
-    clone.makeMove(x, y, b.currentTurn) 
+    val newb = b.makeMove(x, y, b.currentTurn) 
     if(lookahead == 0) {
-    	val s = heuristic(clone, maxPlayer)
+    	val s = heuristic(newb, maxPlayer)
     	s
     } else {
      	var alpha = _alpha
      	var beta = _beta
-     	val moves = clone.allLegalMoves(clone.currentTurn)
+     	val moves = newb.allLegalMoves(newb.currentTurn)
      	if( moves.isEmpty ) {
      	  // Game has ended
-    		if( clone.leadingPlayer == maxPlayer ) {
-    		  clone.score(maxPlayer)
+    		if( newb.leadingPlayer == maxPlayer ) {
+    		  newb.score(maxPlayer)
     		} else {
-    		  -clone.score(maxPlayer.otherPlayer)    		  
+    		  -newb.score(maxPlayer.otherPlayer)    		  
     		}
-     	} else if( clone.currentTurn == maxPlayer ) {
+     	} else if( newb.currentTurn == maxPlayer ) {
 	     	breakable {
 	     	  for( (mx, my) <- moves ) {
-	     		  alpha = alpha max scoreLookaheadAlphaBeta(heuristic, mx, my, clone, lookahead - 1, alpha, beta, maxPlayer)
+	     		  alpha = alpha max scoreLookaheadAlphaBeta(heuristic, mx, my, newb, lookahead - 1, alpha, beta, maxPlayer)
 	     		  if( beta <= alpha )
 	     		    break
 	     	  }
@@ -224,7 +196,7 @@ class AI {
      	} else {
 	     	breakable {
 	     	  for( (mx, my) <- moves ) {
-	     		  beta = beta min scoreLookaheadAlphaBeta(heuristic, mx, my, clone, lookahead - 1, alpha, beta, maxPlayer)
+	     		  beta = beta min scoreLookaheadAlphaBeta(heuristic, mx, my, newb, lookahead - 1, alpha, beta, maxPlayer)
 	     		  if( beta <= alpha )
 	     		    break
 	     	  }

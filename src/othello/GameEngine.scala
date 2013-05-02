@@ -39,49 +39,34 @@ object Direction {
   val all = List(N,NE,E,SE,S,SW,W,NW)
 }
 
-class GameEngine {
-	type Player = PlayerCellState
-    private val _board = new ArrayBuffer(8) ++ (0 to 7).map( _ => 
-	   new ArrayBuffer[CellState](8) ++ (0 to 7).map( _ => Empty ) )
-	private var _currentTurn : PlayerCellState = Black
+case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerCellState, val gameOver: Boolean) {
+	import GameEngine._
 	
-	private var _gameOver = false
-	
-	def gameOver = _gameOver
-	
-	_board(3)(3) = White
-	_board(4)(3) = Black
-	_board(4)(4) = White
-	_board(3)(4) = Black
-
-	def currentTurn = _currentTurn
-	def cell(x:Int,y:Int) = if(x < 0 || x >= 8 || y < 0 || y >= 8) Empty else _board(x)(y)
-	def board : Seq[Seq[CellState]] = _board
-	def copy() ={
-	  var newGame = new GameEngine()
-	  newGame._currentTurn = _currentTurn
-	  newGame._gameOver = _gameOver
-	  for(i <- (0 to 7) ; j <- (0 to 7)) {
-	    newGame._board(i)(j) = _board(i)(j)
-	  }
-	  newGame
-	}
-	def makeMove(x:Int, y:Int, p:Player) {
+	def cell(x:Int,y:Int) = if(x < 0 || x >= 8 || y < 0 || y >= 8) Empty else board(x)(y)
+		
+	def makeMove(x:Int, y:Int, p:Player) = {
 	  if(p != currentTurn) {
 	    throw new Exception("It is not players turn");
 	  }
 	  if(isValidMove(x,y,p)) {
-		  _board(x)(y) = p
-		  for(d <- Direction.all if directionHasFlip(x, y, p, d)) {
-		    flipDirection(x, y, d)
-		  }
-		  
+		var newboard = updateCell(board, x, y, p)
+
+		for( d <- Direction.all if directionHasFlip(x, y, p, d)) {
+		  newboard = flipDirection(newboard, x, y, d)
+		}
+
+		val (newgameover, newturn) =
 		  if(allLegalMoves(p.otherPlayer).isEmpty) {
 		    if(allLegalMoves(p).isEmpty)
-		    	_gameOver = true
+		    	(true, currentTurn)
+		    else
+		    	(false, currentTurn)
 		  } else {
-			  _currentTurn = _currentTurn.otherPlayer
+			  (false, currentTurn.otherPlayer)
 		  }
+	    GameEngine(newboard, newturn, newgameover)
+	  } else {
+	    this
 	  }
 	}
 	
@@ -112,12 +97,13 @@ class GameEngine {
 		h(x, y, d) && cell(x+dx, y+dy) == p.otherPlayer
 	}
 	
-	private def flipDirection(x : Int, y : Int, d : Direction) {
+	private def flipDirection(b: Board, x : Int, y : Int, d : Direction) : Board = {
 		val (dx, dy) = d.step
 		
 		if(cell(x+dx, y+dy) == currentTurn.otherPlayer) {
-			_board(x+dx)(y+dy) = currentTurn
-			flipDirection(x+dx, y+dy, d)
+			flipDirection(updateCell(b, x+dx, y+dy, currentTurn), x+dx, y+dy, d)
+		} else {
+		  b
 		}
 	}
 	
@@ -127,6 +113,20 @@ class GameEngine {
 	
 	override def toString = {
 	  "c=" + currentTurn + ". go=" + gameOver + "\n" +
-	  _board.map(_.mkString("")).mkString("\n")
+	  board.map(_.mkString("")).mkString("\n")
 	}
+}
+
+object GameEngine { 
+  type Player = PlayerCellState
+  type Board = List[List[CellState]]
+  
+  def updateCell(b: Board, x: Int, y: Int, v: CellState) = b.updated(x, b(x).updated(y, v))
+ 
+  private val emptyBoard : Board = (0 to 7).toList.map(_ => (0 to 7).toList.map(_ => Empty)) 
+  // emptyBoard * (3, 3, White) * ....
+  val starting = GameEngine(
+      updateCell(updateCell(updateCell(updateCell(emptyBoard, 4, 3, Black), 3, 4, Black), 4, 4, White), 3, 3, White),
+      Black, 
+      false)
 }

@@ -25,21 +25,21 @@ object Main extends SimpleSwingApplication {
 		}
 	}
 	
-	val engine  = new GameEngine
+	var engine  = GameEngine.starting
 	val ai = new AI
 	
 	def handleClick(x : Int, y : Int) {
 	  println((x,y))
 	  
 	  if( engine.currentTurn == Black ) {
-		  engine.makeMove(x, y, Black)
+		  engine = engine.makeMove(x, y, Black)
 		  render()
 	  }
 	  
 	  if( engine.currentTurn == White ) {
 		  Swing.onEDT {
 			  val (mx, my) = ai.makeMove(engine)
-			  engine.makeMove(mx, my, White)
+			  engine = engine.makeMove(mx, my, White)
 			  render()
 		  }
 	  }
