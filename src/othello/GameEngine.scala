@@ -1,8 +1,8 @@
 package othello
 
 import scala.collection.mutable.ArrayBuffer
-sealed trait CellState
 
+sealed trait CellState
 
 sealed trait PlayerCellState extends CellState {
   def otherPlayer : PlayerCellState
@@ -49,12 +49,15 @@ case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerC
 	    throw new Exception("It is not players turn");
 	  }
 	  if(isValidMove(x,y,p)) {
-		var newboard = updateCell(board, x, y, p)
-
+		var newboard = board & (x, y, p)
+		
 		for( d <- Direction.all if directionHasFlip(x, y, p, d)) {
 		  newboard = flipDirection(newboard, x, y, d)
 		}
-
+		// This could also be written as:
+		//   Direction.all.filter(directionHasFlip(x, y, p, _)).foldLeft(newboard)(flipDirection(_, x, y, _))
+		// However I admit this is less readable, even though I find it prettier which is why I added it here.
+		
 		val (newgameover, newturn) =
 		  if(allLegalMoves(p.otherPlayer).isEmpty) {
 		    if(allLegalMoves(p).isEmpty)
@@ -101,7 +104,7 @@ case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerC
 		val (dx, dy) = d.step
 		
 		if(cell(x+dx, y+dy) == currentTurn.otherPlayer) {
-			flipDirection(updateCell(b, x+dx, y+dy, currentTurn), x+dx, y+dy, d)
+			flipDirection(b & (x+dx, y+dy, currentTurn), x+dx, y+dy, d)
 		} else {
 		  b
 		}
@@ -112,7 +115,7 @@ case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerC
 	} 
 	
 	override def toString = {
-	  "c=" + currentTurn + ". go=" + gameOver + "\n" +
+	  "c=" + currentTurn + ". over=" + gameOver + "\n" +
 	  board.map(_.mkString("")).mkString("\n")
 	}
 }
@@ -121,12 +124,16 @@ object GameEngine {
   type Player = PlayerCellState
   type Board = List[List[CellState]]
   
-  def updateCell(b: Board, x: Int, y: Int, v: CellState) = b.updated(x, b(x).updated(y, v))
+  implicit class RichBoard(b : Board) {
+    def set(x: Int, y: Int, v: CellState) = b.updated(x, b(x).updated(y, v))
+    def &(x: Int, y: Int, v: CellState) = set(x, y, v)
+  }
+  
  
   private val emptyBoard : Board = (0 to 7).toList.map(_ => (0 to 7).toList.map(_ => Empty)) 
-  // emptyBoard * (3, 3, White) * ....
+
   val starting = GameEngine(
-      updateCell(updateCell(updateCell(updateCell(emptyBoard, 4, 3, Black), 3, 4, Black), 4, 4, White), 3, 3, White),
+      emptyBoard & (4, 3, Black) & (3, 4, Black) & (4, 4, White) & (3, 3, White),
       Black, 
       false)
 }
