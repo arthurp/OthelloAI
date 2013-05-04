@@ -113,15 +113,9 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-<<<<<<< HEAD
-    val (m, _, t) = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
-    Utils.printToFile(new File("trace.xml"))(p => p.println(t))
-    m.get
-=======
     val trace = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
     Utils.printToFile(new File("trace.xml"))(p => p.println(trace))
     trace.move.get
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode
   }
   
   def scoreNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine) ={
@@ -133,13 +127,8 @@ class AI {
   def computeAllHeuristics(b : GameEngine, p : PlayerCellState) : Map[String, Float] = {
     Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
-<<<<<<< HEAD
-
-  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : (Option[(Int, Int)], Score, TraceNode) ={
-=======
   
   def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : TraceNode ={
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
     
@@ -149,13 +138,8 @@ class AI {
     	} else {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
-<<<<<<< HEAD
-    	// TODO: Fix trace generation
-    	(None, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
-=======
     	// We want this to be a root node
     	TraceNode(None, bestScore, b, maximizing, Seq(), Some(bestScore))
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode
     } else if(lookahead == 0) {
     	val scores = currentLegalMoves.map(move => {
      	  val newb = b.makeMove(move._1,move._2,b.currentTurn)
@@ -163,21 +147,6 @@ class AI {
     	  })
     	val (bestMove, bestScore, bestBoard) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
     	// TODO: Fix trace generation
-<<<<<<< HEAD
-    	(Some(bestMove), bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, Seq(), 0, b, Some(bestScore)))
-    } else {
-    	val childrenResults = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
-    	  val (_, s, t) = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
-    	  (Some((mx, my)), s, t)
-    	}
-    	
-    	val (bestMove, bestScore, bestBoard) = if( maximizing )
-	    	  childrenResults.maxBy(_._2)
-	    	else
-	    	  childrenResults.minBy(_._2)
-    	
-    	(bestMove, bestScore, TraceNode(bestScore, bestScore, bestScore, maximizing, childrenResults.map(_._3), 0, b, None))
-=======
     	TraceNode(Some(bestMove), bestScore, b, maximizing, Seq(), Some(bestScore))
     } else {
     	val childrenResults = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
@@ -190,7 +159,6 @@ class AI {
 	    	else
 	    	  childrenResults.minBy(_.score)
     	TraceNode(traceNode.move, traceNode.score, traceNode.position, maximizing, childrenResults)
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode
     }          
   } 
   
@@ -237,8 +205,4 @@ class AI {
     }          
   } 
   
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode

@@ -4,22 +4,11 @@ import scala.xml.Elem
 import scala.xml.PrettyPrinter
 
 case class TraceNode(
-<<<<<<< HEAD
-		score : Score, // The score of this node (derived from it's children, if it is an internal node).
-					   // This may not actually be the best possible since it might have pruned.
-		alpha : Score, // The lower bound on the score of this subtree.
-		beta : Score, // The upper bound on the score of this subtree.
-		maxmin : Boolean, // True if this node is maximizing
-		descendants : Seq[TraceNode], // The descendants of this node from which the scores are calculated. Empty for leaves.
-		prunedN : Int = 0, // The number of additional descendants that where not processed.
-		position : GameEngine, // The board at this node i
-=======
 		move : Option[(Int, Int)], // move made at this level
 		score : Score,   // The score of this node (derived from it's children, if it is an internal node 
 		position : GameEngine,   // The board at this node
 		maxmin : Boolean,   // True if this node is maximizing
 		descendants : Seq[TraceNode],   // The descendants of this node from which the scores are calculated. Empty for leave
->>>>>>> Committing refactoring of scoreLookaheadNaive, and traceNode
 		positionScore : Option[Score] = None // Optionally the score of the position. This will not equal score.
 	) {
  
