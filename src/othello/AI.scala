@@ -128,7 +128,7 @@ class AI {
     Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
   
-  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : TraceNode ={
+  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : SearchTree ={
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
     
@@ -139,7 +139,7 @@ class AI {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
     	// We want this to be a root node
-    	TraceNode(None, bestScore, b, maximizing, Seq(), Some(bestScore))
+    	SearchTree(None, bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
     } else if(lookahead == 0) {
     	val scores = currentLegalMoves.map(move => {
      	  val newb = b.makeMove(move._1,move._2,b.currentTurn)
@@ -147,18 +147,19 @@ class AI {
     	  })
     	val (bestMove, bestScore, bestBoard) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
     	// TODO: Fix trace generation
-    	TraceNode(Some(bestMove), bestScore, b, maximizing, Seq(), Some(bestScore))
+    	SearchTree(Some(bestMove), bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
     } else {
-    	val childrenResults = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
-    	  val trace = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
-    	  TraceNode(Some((mx, my)), trace.score, trace.position, trace.maxmin,trace.descendants)
+    	val childrenResults : IndexedSeq[SearchTree] = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
+    	  val searchTree : SearchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
+    	  SearchTree(Some((mx, my)), searchTree.score, searchTree.board, searchTree.maxmin,searchTree.descendants)
     	}
-   	    // TODO sort the child nodes
-    	val traceNode = if( maximizing )
-	    	  childrenResults.maxBy(_.score)
-	    	else
-	    	  childrenResults.minBy(_.score)
-    	TraceNode(traceNode.move, traceNode.score, traceNode.position, maximizing, childrenResults)
+    	val sortedChildren  : IndexedSeq[SearchTree] = childrenResults.sortWith(
+    		(x,y) => 
+    			if(maximizing) x.score > y.score
+    			else x.score < y.score
+    		);
+    	val chosenMove = sortedChildren.apply(0)
+	    SearchTree(chosenMove.move, chosenMove.score, b, maximizing, sortedChildren)
     }          
   } 
   
