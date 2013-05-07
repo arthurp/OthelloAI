@@ -6,7 +6,7 @@ import scala.xml.PrettyPrinter
 /**
  * @param move - the move made at this level
  * @param score - The score of this node. The score is derived from it's children if it's an internal node
- * @param board - The game board after the move was made
+ * @param board - The game board before the move is made
  * @param maxin - True if the AI is currently returning the maximum score.
  * @param decendents - The descendants of this node from which the scores are calculated. Empty for leaf node.
  * @param positionScore - Optionally the score of the position. This will not equal score. 
