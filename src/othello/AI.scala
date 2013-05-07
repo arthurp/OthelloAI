@@ -91,11 +91,11 @@ class AI {
   val mobility2 = new Heuristic {
       override def compute(b : GameEngine, p : PlayerCellState)  = {
     var score : Float =0.0f; 
-    for( (x,y) <- b.allLegalMoves(p) ) {
+    for( Move(x,y) <- b.allLegalMoves(p) ) {
        if( positionScores(x)(y) > 0 ) 
          score += positionScores(x)(y) 
     }
-    for( (x,y) <- b.allLegalMoves(p.otherPlayer)) {
+    for( Move(x,y) <- b.allLegalMoves(p.otherPlayer)) {
        if( positionScores(x)(y) > 0 ) 
     	 score -= positionScores(x)(y)
     }
@@ -128,7 +128,7 @@ class AI {
     Map() ++ allHeuristics.map(v => (v._1, v._2(b, p)))
   }
   
-  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : SearchTree ={
+  def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : NaiveSearchTree ={
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
     
@@ -139,30 +139,32 @@ class AI {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
     	// We want this to be a root node
-    	SearchTree(None, bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
+    	NaiveSearchTree(None, bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
     } else if(lookahead == 0) {
     	val scores = currentLegalMoves.map(move => {
-     	  val newb = b.makeMove(move._1,move._2,b.currentTurn)
+     	  val newb = b.makeMove(move.x,move.y,b.currentTurn)
     	  (move, Score(heuristic(b, topPlayer), computeAllHeuristics(newb, topPlayer)), newb)
     	  })
     	val (bestMove, bestScore, bestBoard) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
     	// TODO: Fix trace generation
-    	SearchTree(Some(bestMove), bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
+    	NaiveSearchTree(Some(bestMove), bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
     } else {
-    	val childrenResults : IndexedSeq[SearchTree] = for( (mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
-    	  val searchTree : SearchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
-    	  SearchTree(Some((mx, my)), searchTree.score, searchTree.board, searchTree.maxmin,searchTree.descendants)
+    	val childrenResults = for( Move(mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
+    	  val searchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
+    	  NaiveSearchTree(Some(Move(mx, my)), searchTree.score, searchTree.board, searchTree.maxmin,searchTree.descendants)
     	}
-    	val sortedChildren  : IndexedSeq[SearchTree] = childrenResults.sortWith(
+    	val sortedChildren = childrenResults.sortWith(
     		(x,y) => 
     			if(maximizing) x.score > y.score
     			else x.score < y.score
     		);
+    	
     	val chosenMove = sortedChildren.head
-	    SearchTree(chosenMove.move, chosenMove.score, b, maximizing, sortedChildren)
+	    NaiveSearchTree(chosenMove.move, chosenMove.score, b, maximizing, sortedChildren)
     }          
   } 
   
+  /*
   /*
    * Alpha = the lower bound on the resulting score
    * Beta = the upper bound of the resulting score
@@ -205,5 +207,6 @@ class AI {
      	}
     }          
   } 
+  */
   
 }

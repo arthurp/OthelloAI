@@ -2,6 +2,9 @@ package othello
 
 import scala.collection.mutable.ArrayBuffer
 
+
+case class Move(x:Int, y:Int)
+
 sealed trait CellState
 
 sealed trait PlayerCellState extends CellState {
@@ -112,7 +115,7 @@ class GameEngine(val board: List[List[CellState]], defaultCurrentTurn: PlayerCel
 	}
 	
 	def allLegalMoves(p : Player) = {
-	  for(i <- 0 to 7; j <- 0 to 7 if isValidMove(i, j, p)) yield (i, j)
+	  for(i <- 0 to 7; j <- 0 to 7 if isValidMove(i, j, p)) yield Move(i, j)
 	} 
 	
 	override def toString = {

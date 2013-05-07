@@ -38,7 +38,7 @@ object Main extends SimpleSwingApplication {
 	  
 	  if( engine.currentTurn == White ) {
 		  Swing.onEDT {
-			  val (mx, my) = ai.makeMove(engine)
+			  val Move(mx, my) = ai.makeMove(engine)
 			  engine = engine.makeMove(mx, my, White)
 			  render()
 		  }
