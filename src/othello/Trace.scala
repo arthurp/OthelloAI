@@ -23,19 +23,54 @@ abstract class SearchTree {
  * @param decendents - The descendants of this node from which the scores are calculated. Empty for leaf node.
  * @param positionScore - Optionally the score of the position. This will not equal score. 
  */
-case class NaiveSearchTree(
-    move : Option[Move], 
+abstract class NaiveSearchTree extends SearchTree {
+    val board : GameEngine
+    val maxmin : Boolean
+    val positionScore : Option[Score]
+}
+
+object NaiveSearchTree {
+  case class Choice(
+    thismove : Move, 
     score : Score,
     board : GameEngine,
     maxmin : Boolean,
     descendants : IndexedSeq[NaiveSearchTree], 
     positionScore : Option[Score] = None)
-     extends SearchTree {
-  def toXML : Elem = {
+    extends NaiveSearchTree {
+    def toXML: Elem = {
     <node maxmin={maxmin.toString} move={move.toString}><board>{board.toString}</board>{score.toXML} <children> {descendants.map(_.toXML)} </children> </node>
+    }
+    
+    val move = Some(thismove)
   }
-}
+  case class SearchLimit(
+    thismove : Move, 
+    score : Score,
+    board : GameEngine,
+    maxmin : Boolean)
+    extends NaiveSearchTree {
+    def toXML: Elem = {
+      <node maxmin={ maxmin.toString } move={ move.toString }><board>{ board.toString }</board></node>
+    }
+    
+    val positionScore = Some(score)
+    val move = Some(thismove)
+  }
+  case class GameOver(
+    score : Score,
+    board : GameEngine,
+    maxmin : Boolean)
+    extends NaiveSearchTree {
+    def toXML: Elem = {
+      <node maxmin={ maxmin.toString }><board>{ board.toString }</board></node>
+    }
+    
+    val positionScore = Some(score)
+    val move = None
+  }
 
+}
 /**
  * @see NaiveSearchTree
  * 

@@ -139,7 +139,7 @@ class AI {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
     	// We want this to be a root node
-    	NaiveSearchTree(None, bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
+    	NaiveSearchTree.GameOver(bestScore, b, maximizing)
     } else if(lookahead == 0) {
     	val scores = currentLegalMoves.map(move => {
      	  val newb = b.makeMove(move.x,move.y,b.currentTurn)
@@ -147,20 +147,20 @@ class AI {
     	  })
     	val (bestMove, bestScore, bestBoard) = if( maximizing ) scores.maxBy(_._2) else scores.minBy(_._2);
     	// TODO: Fix trace generation
-    	NaiveSearchTree(Some(bestMove), bestScore, b, maximizing, IndexedSeq(), Some(bestScore))
+    	NaiveSearchTree.SearchLimit(bestMove, bestScore, b, maximizing)
     } else {
-    	val childrenResults = for( Move(mx, my) <- b.allLegalMoves(b.currentTurn) ) yield {
+    	val childrenResults = for( m@Move(mx,my) <- b.allLegalMoves(b.currentTurn) ) yield {
     	  val searchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
-    	  NaiveSearchTree(Some(Move(mx, my)), searchTree.score, searchTree.board, searchTree.maxmin,searchTree.descendants)
+    	  (m, searchTree)
     	}
     	val sortedChildren = childrenResults.sortWith(
     		(x,y) => 
-    			if(maximizing) x.score > y.score
-    			else x.score < y.score
+    			if(maximizing) x._2.score > y._2.score
+    			else x._2.score < y._2.score
     		);
-    	
-    	val chosenMove = sortedChildren.head
-	    NaiveSearchTree(chosenMove.move, chosenMove.score, b, maximizing, sortedChildren)
+    	val (m,chosenMove) = sortedChildren.head
+	    NaiveSearchTree.Choice(m, chosenMove.score, b, maximizing, sortedChildren.unzip._2)
+
     }          
   } 
   
