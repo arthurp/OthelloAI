@@ -36,7 +36,7 @@ case class SearchTree(
   }
   
   def toXML : Elem = {
-    <node maxmin={maxmin.toString} move={move.toString}><board>{board.toString}</board>{score.toXML +: descendants.map(_.toXML)}</node>
+    <node maxmin={maxmin.toString} move={move.toString}><board>{board.toString}</board>{score.toXML} <children> {descendants.map(_.toXML)} </children> </node>
   }
 }
 

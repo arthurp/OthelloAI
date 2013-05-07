@@ -158,7 +158,7 @@ class AI {
     			if(maximizing) x.score > y.score
     			else x.score < y.score
     		);
-    	val chosenMove = sortedChildren.apply(0)
+    	val chosenMove = sortedChildren.head
 	    SearchTree(chosenMove.move, chosenMove.score, b, maximizing, sortedChildren)
     }          
   } 
