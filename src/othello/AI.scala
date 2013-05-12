@@ -121,7 +121,8 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    val trace = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    //val trace = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    val trace = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
     Utils.printToFile(new File("trace.xml"))(p => p.println(trace))
     trace.move.get
   }
