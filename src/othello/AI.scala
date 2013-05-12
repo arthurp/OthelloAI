@@ -110,7 +110,7 @@ class AI {
     score
   } }
   
-  val heuristic = mobility1 + (positional * 30.0) + mobility2 * 1.5
+  val heuristic = mobility1 + (positional * 2) + (mobility2 * 4)
   
   def makeMove(b : GameEngine) = {
     val lookahead = 3
