@@ -39,8 +39,18 @@ object Direction {
   val all = List(N,NE,E,SE,S,SW,W,NW)
 }
 
-case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerCellState, val gameOver: Boolean) {
+class GameEngine(val board: List[List[CellState]], defaultCurrentTurn: PlayerCellState) {
 	import GameEngine._
+	
+	val (gameOver, currentTurn) =
+		  if(allLegalMoves(defaultCurrentTurn).isEmpty) {
+		    if(allLegalMoves(defaultCurrentTurn.otherPlayer).isEmpty)
+		    	(true, defaultCurrentTurn.otherPlayer)
+		    else
+		    	(false, defaultCurrentTurn.otherPlayer)
+		  } else {
+			  (false, defaultCurrentTurn)
+		  }
 	
 	def cell(x:Int,y:Int) = if(x < 0 || x >= 8 || y < 0 || y >= 8) Empty else board(x)(y)
 		
@@ -58,16 +68,7 @@ case class GameEngine(val board: List[List[CellState]], val currentTurn: PlayerC
 		//   Direction.all.filter(directionHasFlip(x, y, p, _)).foldLeft(newboard)(flipDirection(_, x, y, _))
 		// However I admit this is less readable, even though I find it prettier which is why I added it here.
 		
-		val (newgameover, newturn) =
-		  if(allLegalMoves(p.otherPlayer).isEmpty) {
-		    if(allLegalMoves(p).isEmpty)
-		    	(true, currentTurn)
-		    else
-		    	(false, currentTurn)
-		  } else {
-			  (false, currentTurn.otherPlayer)
-		  }
-	    GameEngine(newboard, newturn, newgameover)
+	    new GameEngine(newboard, currentTurn.otherPlayer)
 	  } else {
 	    this
 	  }
@@ -132,8 +133,7 @@ object GameEngine {
  
   private val emptyBoard : Board = (0 to 7).toList.map(_ => (0 to 7).toList.map(_ => Empty)) 
 
-  val starting = GameEngine(
+  val starting = new GameEngine(
       emptyBoard & (4, 3, Black) & (3, 4, Black) & (4, 4, White) & (3, 3, White),
-      Black, 
-      false)
+      Black)
 }
