@@ -11,8 +11,23 @@ abstract class SearchTree {
 
   def toXML : Elem
   
-  val move : Option[Move] 
+  val move : Option[Move]
   val score : Score
+  
+  val time : Float
+}
+
+class Timer {
+  val start = System.nanoTime()
+  def time() = (System.nanoTime() - start) / (1000*1000*1000)
+}
+
+object SearchTree {
+  def time[A](f : => A) : (A, Float) = {
+    val t = System.nanoTime()
+    val r = f
+    (r, System.nanoTime() - t)
+  }
 }
 
 /**
@@ -35,20 +50,22 @@ object NaiveSearchTree {
     board : GameEngine,
     maxmin : Boolean,
     descendants : IndexedSeq[NaiveSearchTree], 
-    positionScore : Option[Score] = None)
+    positionScore : Option[Score] = None,
+    time : Float = -1)
     extends NaiveSearchTree {
     def toXML: Elem = {
-      <node kind="Choice" maxmin={maxmin.toString} move={thismove.toString}><board>{board.toString}</board>{score.toXML} <children> {descendants.map(_.toXML)} </children> </node>
+      <node kind="Choice" maxmin={maxmin.toString} move={thismove.toString} time={time.toString}><board>{board.toString}</board>{score.toXML} <children> {descendants.map(_.toXML)} </children> </node>
     }
     
     val move = Some(thismove)
   }
   case class SearchLimit(
     score : Score,
-    board : GameEngine)
+    board : GameEngine,
+    time : Float)
     extends NaiveSearchTree {
     def toXML: Elem = {
-      <node kind="SearchLimit"><board>{ board.toString }</board>{ score.toXML }</node>
+      <node kind="SearchLimit" time={time.toString}><board>{ board.toString }</board>{ score.toXML }</node>
     }
     
     val positionScore = Some(score)
@@ -56,10 +73,11 @@ object NaiveSearchTree {
   }
   case class GameOver(
     score : Score,
-    board : GameEngine)
+    board : GameEngine,
+    time : Float)
     extends NaiveSearchTree {
     def toXML: Elem = {
-      <node kind="GameOver"><board>{ board.toString }</board>{ score.toXML }</node>
+      <node kind="GameOver" time={time.toString}><board>{ board.toString }</board>{ score.toXML }</node>
     }
     
     val positionScore = Some(score)
@@ -90,20 +108,27 @@ object AlphaBetaSearchTree {
     descendants: Seq[AlphaBetaSearchTree],
     prunedN: Int = 0,
     board: GameEngine,
-    positionScore: Option[Score] = None) 
+    positionScore: Option[Score] = None,
+    time : Float) 
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
-      <node kind="Choice" maxmin={ maxmin.toString } prunedN={ prunedN.toString } alpha={ alpha.toString } beta={ beta.toString}><board>{ board.toString }</board>{ score.toXML +: descendants.map(_.toXML) }</node>
-    }
+      <node kind="Choice" maxmin={ maxmin.toString } prunedN={ prunedN.toString } 
+      alpha={ alpha.score.toString } beta={ beta.score.toString} move={thismove.toString} time={time.toString}>
+      <board>{ board.toString }</board>
+      { score.toXML}      
+      <children> { descendants.map(_.toXML) } </children>
+      </node>
+      }
     val move = Some(thismove)
   }
   
   case class SearchLimit(
     score : Score,
-    board : GameEngine)
+    board : GameEngine,
+    time : Float)
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
-      <node kind="SearchLimit"><board>{ board.toString }</board>{ score.toXML }</node>
+      <node kind="SearchLimit" time={time.toString}><board>{ board.toString }</board>{ score.toXML }</node>
     }
     
     val positionScore = Some(score)
@@ -111,10 +136,11 @@ object AlphaBetaSearchTree {
   }
   case class GameOver(
     score : Score,
-    board : GameEngine)
+    board : GameEngine,
+    time : Float)
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
-      <node kind="GameOver"><board>{ board.toString }</board>{ score.toXML }</node>
+      <node kind="GameOver" time={time.toString}><board>{ board.toString }</board>{ score.toXML }</node>
     }
     
     val positionScore = Some(score)

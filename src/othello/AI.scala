@@ -121,10 +121,16 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    //val trace = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
-    val trace = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
-    Utils.printToFile(new File("trace.xml"))(p => p.println(trace))
-    trace.move.get
+    val traceab = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    val tracenaive = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
+    Utils.printToFile(new File("traceab.xml"))(p => p.println(traceab))
+    Utils.printToFile(new File("tracenaive.xml"))(p => p.println(tracenaive))
+    
+    if( traceab.move != tracenaive.move ) {
+      println(s"Moves differ: ${traceab.move} (ab) ${tracenaive.move} (naive)")
+    }
+    
+    traceab.move.get
   }
   
   def scoreNaive(heuristic : Heuristic, x:Int, y:Int, b:GameEngine) ={
@@ -138,6 +144,7 @@ class AI {
   }
   
   def scoreLookaheadNaive(heuristic : Heuristic, b:GameEngine, lookahead:Int, topPlayer : PlayerCellState) : NaiveSearchTree ={
+    val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
     
@@ -148,10 +155,10 @@ class AI {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
     	// We want this to be a root node
-    	NaiveSearchTree.GameOver(bestScore, b)
+    	NaiveSearchTree.GameOver(bestScore, b, timer.time)
     } else if(lookahead == 0) {
     	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
-    	NaiveSearchTree.SearchLimit(score, b)
+    	NaiveSearchTree.SearchLimit(score, b, timer.time)
     } else {
     	val childrenResults = for( m@Move(mx,my) <- currentLegalMoves ) yield {
     	  val searchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
@@ -163,7 +170,7 @@ class AI {
     			else x._2.score < y._2.score
     		);
     	val (m,chosenMove) = sortedChildren.head
-	    NaiveSearchTree.Choice(m, chosenMove.score, b, maximizing, sortedChildren.unzip._2)
+	    NaiveSearchTree.Choice(m, chosenMove.score, b, maximizing, sortedChildren.unzip._2, time = timer.time)
 
     }          
   } 
@@ -174,6 +181,7 @@ class AI {
    */
   def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
+    val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
 
@@ -184,54 +192,15 @@ class AI {
     		Score(-b.score(topPlayer.otherPlayer))    		  
     	}      
     	// We want this to be a root node
-    	AlphaBetaSearchTree.GameOver(bestScore, b)
+    	AlphaBetaSearchTree.GameOver(bestScore, b, timer.time)
     } else if(lookahead == 0) {
     	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
-    	AlphaBetaSearchTree.SearchLimit(score, b)
-    } else {
-    	val childrenResults = for( m@Move(mx,my) <- b.allLegalMoves(b.currentTurn) ) yield {
-    	  val searchTree = scoreLookaheadNaive(heuristic, b.makeMove(mx,my,b.currentTurn), lookahead - 1, topPlayer)
-    	  (m, searchTree)
-    	}
-    	val sortedChildren = childrenResults.sortWith(
-    		(x,y) => 
-    			if(maximizing) x._2.score > y._2.score
-    			else x._2.score < y._2.score
-    		);
-    	val (m,chosenMove) = sortedChildren.head
-	    NaiveSearchTree.Choice(m, chosenMove.score, b, maximizing, sortedChildren.unzip._2)
-	    
+    	AlphaBetaSearchTree.SearchLimit(score, b, timer.time)
+    } else {      
      	if( b.currentTurn == topPlayer ) {
-     	  /* Another way to do this. This is incorrect, but surves as a sketch.
-     		val beta = _beta
-     		def loop(alpha : Score, l : Seq[Move]) : AlphaBetaSearchTree = l match {
-     		  case Move(mx, my) :: rest => {
-	     		  val st = scoreLookaheadAlphaBeta(heuristic, b.makeMove(mx, my, b.currentTurn), lookahead - 1, alpha, beta, topPlayer)
-	     		  if( beta <= alpha || rest.isEmpty )
-	     		    st
-	     		  else
-	     			loop(alpha max st.score, rest)
-	     	  }
-     		}
-     		
-     		loop(_alpha, currentLegalMoves)
-     		*/
-     		
-     	  /* Another way that might be cleaner
-     		currentLegalMoves.foldRight(AlphaBetaSearchTree.Choice(null, null, _alpha, _beta, maximizing, Nil, 0, b)) {
-     			(m, st) =>
-	     		  if( st.beta <= st.alpha ) {
-	     		    st
-	     		  } else {
-	     		    val child = scoreLookaheadAlphaBeta(heuristic, b.makeMove(m.x, m.y, b.currentTurn), lookahead - 1, alpha, beta, topPlayer)
-	     		    AlphaBetaSearchTree.Choice(m, child.score, b, maximizing, st
-	     		  }
-     		}
-     		*/
-     		
      	  // Arthur: I think this is easier for most people to understand. But I don't really like it. Oh well.
      		var alpha = _alpha
-     		var ret = AlphaBetaSearchTree.Choice(null, null, _alpha, _beta, maximizing, Nil, 0, b)
+     		var ret = AlphaBetaSearchTree.Choice(null, null, _alpha, _beta, maximizing, Nil, 0, b, time = timer.time())
      		val beta = _beta
 	     	breakable {
 	     	  for( m@Move(mx, my) <- currentLegalMoves ) {
@@ -239,7 +208,7 @@ class AI {
 	     		  alpha = alpha max child.score
 	     		  ret = AlphaBetaSearchTree.Choice(
 	     				  			m, child.score, alpha, beta, maximizing, 
-	     				  			child +: ret.descendants, 0, b)
+	     				  			child +: ret.descendants, 0, b, time = timer.time())
 	     		  if( beta <= alpha )
 	     		    break
 	     	  }
@@ -249,7 +218,7 @@ class AI {
      	} else {
      	  // Arthur: I want this to share most of it's code with the one above. Can you see a way?
      		val alpha = _alpha
-     		var ret = AlphaBetaSearchTree.Choice(null, null, _alpha, _beta, maximizing, Nil, 0, b)
+     		var ret = AlphaBetaSearchTree.Choice(null, null, _alpha, _beta, maximizing, Nil, 0, b, time = timer.time())
      		var beta = _beta
 	     	breakable {
 	     	  for( m@Move(mx, my) <- currentLegalMoves ) {
@@ -257,7 +226,7 @@ class AI {
 	     		  beta = beta min child.score
 	     		  ret = AlphaBetaSearchTree.Choice(
 	     				  			m, child.score, alpha, beta, maximizing, 
-	     				  			child +: ret.descendants, 0, b)
+	     				  			child +: ret.descendants, 0, b, time = timer.time())
 	     		  if( beta <= alpha )
 	     		    break
 	     	  }
