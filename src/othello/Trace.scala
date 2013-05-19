@@ -19,7 +19,7 @@ abstract class SearchTree {
 
 class Timer {
   val start = System.nanoTime()
-  def time() = (System.nanoTime() - start) / (1000*1000*1000)
+  def time() = (System.nanoTime() - start) / (1000.0f*1000*1000)
 }
 
 object SearchTree {
@@ -145,6 +145,18 @@ object AlphaBetaSearchTree {
     
     val positionScore = Some(score)
     val move = None
+  }
+  case class Pruned(
+    thismove : Move,
+    board : GameEngine,
+    time : Float)
+    extends AlphaBetaSearchTree {
+    def toXML: Elem = {
+      <node kind="Pruned" move={thismove.toString} time={time.toString}><board>{ board.toString }</board></node>
+    }
+    val score = Score(0)
+    val positionScore = None
+    val move = Some(thismove)
   }
 
 }
