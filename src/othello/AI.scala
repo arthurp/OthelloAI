@@ -276,9 +276,9 @@ class AI {
     } else {
       // The inductive case where pruning occurs. Here be dragons.
       // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
-      val subTrees : Seq[AlphaBetaSearchTree] = for(move : Move <- currentLegalMoves) yield {
+      val children= for(move : Move <- currentLegalMoves) yield {
         val searchTree = if(currentBeta >= currentAlpha) {
-          AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time)
+          (None,AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time))
         } else {
           val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
 	      // updating alpha beta value
@@ -287,14 +287,15 @@ class AI {
 	      } else if (searchTreeTemp.score.get < currentAlpha){
 	        currentAlpha = searchTreeTemp.score.get
 	      }
-          searchTreeTemp
+          (Some(move),searchTreeTemp)
         }
         searchTree
       }
-      val sortedSubTrees = AlphaBetaSearchTree.sortTrees(subTrees,maximizing)
+      val sortedChildren = children.sortWith((a,b) => a._2.compareTo(b._2,maximizing))
       // TODO: create a new node to return with score associated with head
-      val head = sortedSubTrees.head
-      AlphaBetaSearchTree.Choice(head.move.get,head.score.get,_alpha,_beta,maximizing,sortedSubTrees,b,timer.time)      
+      val head = sortedChildren.head._2
+      val move = sortedChildren.head._1.get
+      AlphaBetaSearchTree.Choice(move,head.score.get,_alpha,_beta,maximizing,sortedChildren.map(_._2),b,timer.time)      
     }
   }
 }
