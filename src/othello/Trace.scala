@@ -100,7 +100,7 @@ abstract class AlphaBetaSearchTree extends SearchTree {
     
     def compareTo(b: AlphaBetaSearchTree, maximizing : Boolean) : Boolean ={
       if( this.score == None ) false
-	  else if( this.score == None ) true
+	  else if( b.score == None ) true
 	  else if(maximizing) (this.score.get > b.score.get)
 	  else (b.score.get > this.score.get)
     }
