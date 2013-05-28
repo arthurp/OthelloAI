@@ -121,7 +121,7 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    val traceab = scoreLookaheadAlphaBeta(heuristic, b, None, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    val traceab = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
     //val tracenaive = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
     Utils.printToFile(new File("traceab.xml"))(p => p.println(traceab))
     //Utils.printToFile(new File("tracenaive.xml"))(p => p.println(tracenaive))
@@ -169,7 +169,7 @@ class AI {
     			else x._2.score < y._2.score
     		);
     	val (m,chosenMove) = sortedChildren.head
-	    NaiveSearchTree.Choice(m, chosenMove.score, b, maximizing, sortedChildren.unzip._2, time = timer.time)
+	    NaiveSearchTree.Choice(m, chosenMove.score.get, b, maximizing, sortedChildren.unzip._2, time = timer.time)
 
     }          
   } 
@@ -255,7 +255,7 @@ class AI {
    * Alpha = the lower bound on the resulting score
    * Beta = the upper bound of the resulting score
    */
-  def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, _move : Option[Move], lookahead : Int, 
+  def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
     val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
@@ -280,7 +280,7 @@ class AI {
         val searchTree = if(currentBeta >= currentAlpha) {
           AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time)
         } else {
-          val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), Some(move), lookahead-1, currentAlpha, currentBeta, topPlayer)
+          val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
 	      // updating alpha beta value
 	      if(maximizing && (searchTreeTemp.score.get > currentBeta)) {
 	        currentBeta = searchTreeTemp.score.get
@@ -289,11 +289,12 @@ class AI {
 	      }
           searchTreeTemp
         }
+        searchTree
       }
       val sortedSubTrees = AlphaBetaSearchTree.sortTrees(subTrees,maximizing)
       // TODO: create a new node to return with score associated with head
       val head = sortedSubTrees.head
-      AlphaBetaSearchTree.Choice(_move.get,head.score.get,_alpha,_beta,maximizing,sortedSubTrees,b,timer.time)      
+      AlphaBetaSearchTree.Choice(head.move.get,head.score.get,_alpha,_beta,maximizing,sortedSubTrees,b,timer.time)      
     }
   }
 }
