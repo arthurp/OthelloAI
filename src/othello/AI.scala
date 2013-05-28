@@ -174,6 +174,83 @@ class AI {
     }          
   } 
   
+//  /*
+//   * Alpha = the lower bound on the resulting score
+//   * Beta = the upper bound of the resulting score
+//   */
+//  def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
+//		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
+//    val timer = new Timer()
+//    val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
+//    val currentLegalMoves = b.allLegalMoves(b.currentTurn)
+//
+//    if (currentLegalMoves.isEmpty) {
+//      val bestScore = if (b.leadingPlayer == topPlayer) {
+//        Score(b.score(topPlayer))
+//      } else {
+//        Score(-b.score(topPlayer.otherPlayer))
+//      }
+//      AlphaBetaSearchTree.GameOver(bestScore, b, timer.time)
+//    } else if (lookahead == 0) {
+//    	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
+//    	AlphaBetaSearchTree.SearchLimit(score, b, timer.time)      
+//    } else {
+//      // The inductive case where pruning occurs. Here be dragons.
+//      // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
+//      
+//      def generatePrunedList(ms : Seq[Move], b : GameEngine) = ms.map(m => AlphaBetaSearchTree.Pruned(m, b, 0))
+//
+//      def loop(updateAlphaBeta: (Score, Score, Score) => (Score, Score),
+//               isFavored: (Score, Score, Score) => Boolean)
+//      		(ms: Seq[Move], currentFavoredChild: Option[(Move, AlphaBetaSearchTree)],
+//      		 alpha: Score, beta: Score, processedChildren: List[AlphaBetaSearchTree]): AlphaBetaSearchTree.Choice = {
+//        // Get the first move in the list
+//        val m = ms.head
+//        
+//        // Recursively score that move
+//        val searchTree = scoreLookaheadAlphaBeta(
+//          heuristic, b.makeMove(m.x, m.y, b.currentTurn), lookahead - 1,
+//          alpha, beta, topPlayer)
+//        
+//        // Update alpha and beta using the function updateAlphaBeta.
+//        // This will update alpha when maximizing and beta when minimizing.
+//        // In either case it is updated based on the score of this subtree.
+//        val (newalpha, newbeta) = updateAlphaBeta(alpha, beta, searchTree.score)
+//
+//        // Update the currently favored child. isFavored will check if the score
+//        // is "better" than alpha or beta depending on if we are maximizing or not.
+//        val newcurrentFavoredChild =
+//          if (currentFavoredChild.isEmpty || isFavored(alpha, beta, searchTree.score))
+//            Some((m, searchTree))
+//          else
+//            currentFavoredChild
+//        
+//        // If alpha and beta have met or this was the last move then we are done
+//        if (newalpha >= newbeta || ms.tail.isEmpty) {
+//          val Some((chosenMove, chosenTree)) = newcurrentFavoredChild
+//          // Build the final search tree node. The complexity is generating the trace
+//          // information based on what nodes have been processed already and which have
+//          // been pruned.
+//          AlphaBetaSearchTree.Choice(chosenMove, chosenTree.score, newalpha, newbeta, maximizing,
+//            (processedChildren :+ searchTree) ++ generatePrunedList(ms.tail, b) sortWith (_.score > _.score), 
+//            ms.tail.length, b, time = timer.time)
+//        } else {
+//          // Otherwise we go on to the next move with the updated values
+//          loop(updateAlphaBeta, isFavored)(ms.tail, newcurrentFavoredChild, newalpha, newbeta, 
+//        		  						   processedChildren :+ searchTree)
+//        }
+//      }
+//
+//      if( maximizing ) {        
+//        loop((a, b, s) => (a max s, b), (a, b, s) => a < s)(currentLegalMoves, None, _alpha, _beta, List())
+//      } else {
+//        loop((a, b, s) => (a, b min s), (a, b, s) => b > s)(currentLegalMoves, None, _alpha, _beta, List())        
+//      }
+//    }
+//  }
+//}
+//
+  
   /*
    * Alpha = the lower bound on the resulting score
    * Beta = the upper bound of the resulting score
@@ -190,62 +267,31 @@ class AI {
       } else {
         Score(-b.score(topPlayer.otherPlayer))
       }
-      AlphaBetaSearchTree.GameOver(bestScore, b, timer.time)
+      AlphaBetaSearchTree.GameOver(Some(bestScore), b, timer.time)
     } else if (lookahead == 0) {
     	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
-    	AlphaBetaSearchTree.SearchLimit(score, b, timer.time)      
+    	AlphaBetaSearchTree.SearchLimit(Some(score), b, timer.time)      
     } else {
       // The inductive case where pruning occurs. Here be dragons.
       // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
-      
-      def generatePrunedList(ms : Seq[Move], b : GameEngine) = ms.map(m => AlphaBetaSearchTree.Pruned(m, b, 0))
-
-      def loop(updateAlphaBeta: (Score, Score, Score) => (Score, Score),
-               isFavored: (Score, Score, Score) => Boolean)
-      		(ms: Seq[Move], currentFavoredChild: Option[(Move, AlphaBetaSearchTree)],
-      		 alpha: Score, beta: Score, processedChildren: List[AlphaBetaSearchTree]): AlphaBetaSearchTree.Choice = {
-        // Get the first move in the list
-        val m = ms.head
-        
-        // Recursively score that move
-        val searchTree = scoreLookaheadAlphaBeta(
-          heuristic, b.makeMove(m.x, m.y, b.currentTurn), lookahead - 1,
-          alpha, beta, topPlayer)
-        
-        // Update alpha and beta using the function updateAlphaBeta.
-        // This will update alpha when maximizing and beta when minimizing.
-        // In either case it is updated based on the score of this subtree.
-        val (newalpha, newbeta) = updateAlphaBeta(alpha, beta, searchTree.score)
-
-        // Update the currently favored child. isFavored will check if the score
-        // is "better" than alpha or beta depending on if we are maximizing or not.
-        val newcurrentFavoredChild =
-          if (currentFavoredChild.isEmpty || isFavored(alpha, beta, searchTree.score))
-            Some((m, searchTree))
-          else
-            currentFavoredChild
-        
-        // If alpha and beta have met or this was the last move then we are done
-        if (newalpha >= newbeta || ms.tail.isEmpty) {
-          val Some((chosenMove, chosenTree)) = newcurrentFavoredChild
-          // Build the final search tree node. The complexity is generating the trace
-          // information based on what nodes have been processed already and which have
-          // been pruned.
-          AlphaBetaSearchTree.Choice(chosenMove, chosenTree.score, newalpha, newbeta, maximizing,
-            (processedChildren :+ searchTree) ++ generatePrunedList(ms.tail, b) sortWith (_.score > _.score), 
-            ms.tail.length, b, time = timer.time)
+      var currentAlpha = _alpha
+      var currentBeta = _beta
+      val subTrees : Seq[AlphaBetaSearchTree] = for(move : Move <- currentLegalMoves) yield {
+        val searchTree = if(currentBeta >= currentAlpha) {
+          AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time)
         } else {
-          // Otherwise we go on to the next move with the updated values
-          loop(updateAlphaBeta, isFavored)(ms.tail, newcurrentFavoredChild, newalpha, newbeta, 
-        		  						   processedChildren :+ searchTree)
+          val searchTreeTemp = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
+	      // updating alpha beta value
+	      if(maximizing && (searchTreeTemp.score.get > currentBeta)) {
+	        currentBeta = searchTreeTemp.score.get
+	      } else if (searchTreeTemp.score.get < currentAlpha){
+	        currentAlpha = searchTreeTemp.score.get
+	      } 
+          searchTreeTemp
         }
       }
-
-      if( maximizing ) {        
-        loop((a, b, s) => (a max s, b), (a, b, s) => a < s)(currentLegalMoves, None, _alpha, _beta, List())
-      } else {
-        loop((a, b, s) => (a, b min s), (a, b, s) => b > s)(currentLegalMoves, None, _alpha, _beta, List())        
-      }
-    }
+      val sortedSubTrees = AlphaBetaSearchTree.sortTrees(subTrees,maximizing)
+      sortedSubTrees.head
+   }
   }
 }
