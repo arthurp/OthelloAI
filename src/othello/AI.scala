@@ -121,7 +121,7 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    val traceab = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    val traceab = scoreLookaheadAlphaBeta(heuristic, b, None, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
     //val tracenaive = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
     Utils.printToFile(new File("traceab.xml"))(p => p.println(traceab))
     //Utils.printToFile(new File("tracenaive.xml"))(p => p.println(tracenaive))
@@ -255,43 +255,45 @@ class AI {
    * Alpha = the lower bound on the resulting score
    * Beta = the upper bound of the resulting score
    */
-  def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
+  def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, _move : Option[Move], lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
     val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
-
+    var currentAlpha = _alpha
+    var currentBeta = _beta
+      
     if (currentLegalMoves.isEmpty) {
       val bestScore = if (b.leadingPlayer == topPlayer) {
         Score(b.score(topPlayer))
       } else {
         Score(-b.score(topPlayer.otherPlayer))
       }
-      AlphaBetaSearchTree.GameOver(Some(bestScore), b, timer.time)
+      AlphaBetaSearchTree.GameOver(bestScore, b, timer.time)
     } else if (lookahead == 0) {
     	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
-    	AlphaBetaSearchTree.SearchLimit(Some(score), b, timer.time)      
+    	AlphaBetaSearchTree.SearchLimit(score, b, timer.time)      
     } else {
       // The inductive case where pruning occurs. Here be dragons.
       // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
-      var currentAlpha = _alpha
-      var currentBeta = _beta
       val subTrees : Seq[AlphaBetaSearchTree] = for(move : Move <- currentLegalMoves) yield {
         val searchTree = if(currentBeta >= currentAlpha) {
           AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time)
         } else {
-          val searchTreeTemp = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
+          val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), Some(move), lookahead-1, currentAlpha, currentBeta, topPlayer)
 	      // updating alpha beta value
 	      if(maximizing && (searchTreeTemp.score.get > currentBeta)) {
 	        currentBeta = searchTreeTemp.score.get
 	      } else if (searchTreeTemp.score.get < currentAlpha){
 	        currentAlpha = searchTreeTemp.score.get
-	      } 
+	      }
           searchTreeTemp
         }
       }
       val sortedSubTrees = AlphaBetaSearchTree.sortTrees(subTrees,maximizing)
-      sortedSubTrees.head
-   }
+      // TODO: create a new node to return with score associated with head
+      val head = sortedSubTrees.head
+      AlphaBetaSearchTree.Choice(_move.get,head.score.get,_alpha,_beta,maximizing,sortedSubTrees,b,timer.time)      
+    }
   }
 }

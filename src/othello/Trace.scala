@@ -96,7 +96,8 @@ object NaiveSearchTree {
 abstract class AlphaBetaSearchTree extends SearchTree {
     val score : Option[Score]		
 	val board : GameEngine
-    val positionScore : Option[Score]
+    val descendants: Seq[AlphaBetaSearchTree]
+    val move : Option[Move]
     
     def compareTo(b: AlphaBetaSearchTree, maximizing : Boolean) : Boolean ={
       if( this.score == None ) false
@@ -114,17 +115,16 @@ object AlphaBetaSearchTree {
   
   case class Choice(
     thismove : Move, 
-    score: Option[Score],
+    thisScore: Score,
     alpha: Score,
     beta: Score,
     maxmin: Boolean,
     descendants: Seq[AlphaBetaSearchTree],
-    prunedN: Int = 0,
     board: GameEngine,
     time : Float) 
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
-      <node kind="Choice" maxmin={ maxmin.toString } prunedN={ prunedN.toString } 
+      <node kind="Choice" maxmin={ maxmin.toString } 
       alpha={ alpha.score.toString } beta={ beta.score.toString} move={thismove.toString} time={time.toString}>
       <board>{ board.toString }</board>
       { score.get.toXML}      
@@ -132,10 +132,11 @@ object AlphaBetaSearchTree {
       </node>
       }
     val move = Some(thismove)
+    val score = Some(thisScore)
   }
   
   case class SearchLimit(
-    score : Option[Score],
+    thisScore : Score,
     board : GameEngine,
     time : Float)
     extends AlphaBetaSearchTree {
@@ -144,10 +145,11 @@ object AlphaBetaSearchTree {
     }
     
     val move = None
+    val score = Some(thisScore)
   }  
    
   case class GameOver(
-    score : Option[Score],
+    thisScore : Score,
     board : GameEngine,
     time : Float)
     extends AlphaBetaSearchTree {
@@ -156,6 +158,7 @@ object AlphaBetaSearchTree {
     }
     
     val move = None
+    val score = Some(thisScore)
   }
 
   case class Pruned(
