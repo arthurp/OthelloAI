@@ -46,8 +46,8 @@ case class Score(score : Float, heuristics : Map[String, Float] = Map()) extends
 }
 
 object Score {
-  val MaxValue = Score(Float.MaxValue)
-  val MinValue = Score(Float.MinValue)  
+  val MaxValue = Score(Float.MinValue)
+  val MinValue = Score(Float.MaxValue)  
 }
 
 class AI {
@@ -113,7 +113,8 @@ class AI {
   val heuristic = mobility1 + (positional * 2) + (mobility2 * 4)
   
   def makeMove(b : GameEngine) = {
-    val lookahead = 5
+    // TODO change lookahead back to 5
+    val lookahead = 3
     makeMoveInternal(b,lookahead)
   }
   
@@ -257,7 +258,6 @@ class AI {
    */
   def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
-    print("\n"+("*"*lookahead)+" In scoreLookaheadAlphaBeta : alpha = "+ _alpha+", beta = "+_beta);
     val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
@@ -278,7 +278,7 @@ class AI {
       // The inductive case where pruning occurs. Here be dragons.
       // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
       val children= for(move : Move <- currentLegalMoves) yield {
-        val searchTree = if(currentBeta >= currentAlpha) {
+        val searchTree = if(currentBeta < currentAlpha) {
           (None,AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time))
         } else {
           val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
