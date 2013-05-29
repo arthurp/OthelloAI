@@ -121,7 +121,7 @@ class AI {
   val inf = Float.PositiveInfinity
   
   def makeMoveInternal(b : GameEngine, lookahead : Int) = {
-    val traceab = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MinValue, Score.MaxValue, b.currentTurn)
+    val traceab = scoreLookaheadAlphaBeta(heuristic, b, lookahead, Score.MaxValue, Score.MinValue, b.currentTurn)
     //val tracenaive = scoreLookaheadNaive(heuristic, b, lookahead, b.currentTurn)
     Utils.printToFile(new File("traceab.xml"))(p => p.println(traceab))
     //Utils.printToFile(new File("tracenaive.xml"))(p => p.println(tracenaive))
@@ -257,6 +257,7 @@ class AI {
    */
   def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
+    print("\n"+("*"*lookahead)+" In scoreLookaheadAlphaBeta : alpha = "+ _alpha+", beta = "+_beta);
     val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
