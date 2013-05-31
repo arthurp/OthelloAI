@@ -26,40 +26,6 @@ abstract class Heuristic {
 object AI {
 }
 
-case class Score(score : Float, heuristics : Map[String, Float] = Map(), maxValue : Boolean = false, minValue: Boolean = false) extends Ordered[Score] {
-    def compare(o : Score) = {
-    score compareTo o.score
-  }
-  
-  def toStringLong = {
-    if(maxValue || minValue){
-      "Undefined"
-    } else {
-      "%s (%s)".format(score, heuristics)
-    }    	
-  }
-  
-  override def toString = {
-    if(maxValue || minValue){
-      "Undefined"
-    } else {
-      "%s".format(score)
-    }    
-  }
-  def toXML : Elem = { 
-    <score value={score.toString}>
-     	{ for((heuristic, value) <- heuristics ) yield <heuristic name={heuristic} value={value.toString} />}
-    </score>	
-  }
-  
-  def max(x : Score) = if(score > x.score) this else x  
-  def min(x : Score) = if(score < x.score) this else x  
-}
-
-object Score {
-  val MaxValue = Score(Float.MaxValue, maxValue=true)
-  val MinValue = Score(Float.MinValue, minValue=true)  
-}
 
 class AI {
   val mybreaks = new Breaks

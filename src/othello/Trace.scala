@@ -122,7 +122,7 @@ object AlphaBetaSearchTree {
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
       <node kind="Choice" maxmin={ maxmin.toString } 
-      alpha={ alpha.score.toString } beta={ beta.score.toString} move={thismove.toString} time={time.toString}>
+      alpha={ alpha.toString } beta={ beta.toString} move={thismove.toString} time={time.toString}>
       <board>{ board.toString }</board>
       { score.get.toXML}      
       <children> { descendants.map(_.toXML) } </children>
