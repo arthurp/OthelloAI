@@ -106,7 +106,6 @@ abstract class AlphaBetaSearchTree extends SearchTree {
 }
 
 object AlphaBetaSearchTree {
-  
   def sortTrees(subTrees : Seq[AlphaBetaSearchTree], maximizing: Boolean) ={
     subTrees.sortWith((a, b) => a.compareTo(b,maximizing));
   }
