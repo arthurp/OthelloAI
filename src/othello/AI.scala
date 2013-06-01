@@ -183,7 +183,7 @@ class AI {
       print("\n"+("*"*lookahead)+" Chosing move recursively: Maximizing = "+maximizing+", alpha = "+ _alpha+", beta = "+_beta);
       val children= for(move : Move <- currentLegalMoves) yield {
         val searchTree = if(currentBeta < currentAlpha) {
-          print("\n"+("*"*lookahead)+" Pruning move: alpha = "+ _alpha+", beta = "+_beta);
+          print("\n"+("*"*lookahead)+" Pruning move: alpha = "+ currentAlpha.toString+", beta = "+currentBeta.toString);
           (None,AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn), currentAlpha, currentBeta,timer.time))
         } else {
           val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
