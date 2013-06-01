@@ -162,10 +162,12 @@ object AlphaBetaSearchTree {
   case class Pruned(
     thismove : Move,
     board : GameEngine,
+    alpha : Score,
+    beta : Score,
     time : Float)
     extends AlphaBetaSearchTree {
     def toXML: Elem = {
-      <node kind="Pruned" move={thismove.toString} time={time.toString}><board>{ board.toString }</board></node>
+      <node kind="Pruned" move={thismove.toString} time={time.toString} alpha={alpha.toString} beta={beta.toString}><board>{ board.toString }</board></node>
     }
     val score = None
     val move = Some(thismove)

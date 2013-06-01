@@ -90,7 +90,7 @@ class AI {
   val heuristic = mobility1 + (positional * 2) + (mobility2 * 4)
   
   def makeMove(b : GameEngine) = {
-    val lookahead = 5
+    val lookahead = 3
     makeMoveInternal(b,lookahead)
   }
   
@@ -158,7 +158,6 @@ class AI {
   def scoreLookaheadAlphaBeta(heuristic : Heuristic, b : GameEngine, lookahead : Int, 
 		  					_alpha : Score, _beta : Score, topPlayer : PlayerCellState) : AlphaBetaSearchTree = {
     
-    print("\n"+("*"*lookahead)+" In scoreLookaheadAlphaBeta : alpha = "+ _alpha+", beta = "+_beta);
     val timer = new Timer()
     val maximizing = topPlayer == b.currentTurn // maximize the next possible moves if we will be making the choice
     val currentLegalMoves = b.allLegalMoves(b.currentTurn)
@@ -171,16 +170,21 @@ class AI {
       } else {
         Score(-b.score(topPlayer.otherPlayer))
       }
+      
+    	print("\n"+("*"*lookahead)+"Game over scoring move : score="+bestScore);
       AlphaBetaSearchTree.GameOver(bestScore, b, timer.time)
     } else if (lookahead == 0) {
     	val score = Score(heuristic(b, topPlayer), computeAllHeuristics(b, topPlayer))
-    	AlphaBetaSearchTree.SearchLimit(score, b, timer.time)      
+    	print("\n"+("*"*lookahead)+"Scoring move : score="+score);
+        AlphaBetaSearchTree.SearchLimit(score, b, timer.time)      
     } else {
       // The inductive case where pruning occurs. Here be dragons.
       // TODO: Sorting could occur here for better pruning, it has to be done based on a very simple metric
+      print("\n"+("*"*lookahead)+" Chosing move recursively: Maximizing = "+maximizing+", alpha = "+ _alpha+", beta = "+_beta);
       val children= for(move : Move <- currentLegalMoves) yield {
-        val searchTree = if(currentBeta <= currentAlpha) {
-          (None,AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn),timer.time))
+        val searchTree = if(currentBeta < currentAlpha) {
+          print("\n"+("*"*lookahead)+" Pruning move: alpha = "+ _alpha+", beta = "+_beta);
+          (None,AlphaBetaSearchTree.Pruned(move,b.makeMove(move.x, move.y, b.currentTurn), currentAlpha, currentBeta,timer.time))
         } else {
           val searchTreeTemp : AlphaBetaSearchTree = scoreLookaheadAlphaBeta(heuristic, b.makeMove(move.x, move.y, b.currentTurn), lookahead-1, currentAlpha, currentBeta, topPlayer)
 	      //print("\n"+("*"*lookahead)+"Score ="+searchTreeTemp.score.get);
@@ -197,6 +201,7 @@ class AI {
       val sortedChildren = children.sortWith((a,b) => a._2.compareTo(b._2,maximizing))
       val head = sortedChildren.head._2
       val move = sortedChildren.head._1.get
+      print("\n"+("*"*lookahead)+" Exiting scoreLookaheadAlphaBeta : Maximizing = "+maximizing+", alpha = "+ _alpha+", beta = "+_beta+", chosen score="+head.score.get);
       AlphaBetaSearchTree.Choice(move,head.score.get,currentAlpha,currentBeta,maximizing,sortedChildren.map(_._2),b,timer.time)      
     }
   }

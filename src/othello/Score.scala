@@ -12,20 +12,14 @@ case class Score(score: Float, heuristics: Map[String, Float] = Map(), maxValue:
   }
 
   def toStringLong = {
-    if (maxValue) {
-      "MaxValue"
-    } else if (minValue) {
-      "MinValue"
-    } else {
-      "%s (%s)".format(score, heuristics)
-    }
+      "%s (%s)".format(score.toString, heuristics)
   }
 
   override def toString = {
     if (maxValue) {
-      "MaxValue"
+      "MaxValue:"
     } else if (minValue) {
-      "MinValue"
+      "MinValue:"
     } else {
       "%s".format(score)
     }
