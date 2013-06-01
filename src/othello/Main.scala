@@ -36,7 +36,7 @@ object Main extends SimpleSwingApplication {
 		  render()
 	  }
 	  
-	  if( engine.currentTurn == White ) {
+	  if(! engine.gameOver && engine.currentTurn == White ) {
 		  Swing.onEDT {
 			  val Move(mx, my) = ai.makeMove(engine)
 			  engine = engine.makeMove(mx, my, White)
